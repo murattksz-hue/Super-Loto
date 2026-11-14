@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Süper Loto (6/60) sonuçlarını lototurkiye.com'dan çeker ve analiz eder.
+"""Süper Loto (6/60) sonuçlarını çeker ve analiz eder.
 
 Kullanım:
     python3 superloto.py            # yeni çekilişleri indir + analiz raporu yazdır
