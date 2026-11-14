@@ -2,8 +2,6 @@
 
 Süper Loto (6/60) çekiliş sonuçlarını indiren, analiz eden ve 60 numaranın hepsini kullanan 10 kolon öneren bir Python scripti. Sadece Python standart kütüphanesini kullanır; kurulum gerektirmez.
 
-Sonuçlar [lototurkiye.com](https://www.lototurkiye.com/SUPER-LOTO-SISAL/ANA-SAYFA/12) sitesinden alınır.
-
 > **Not:** Her çekiliş bağımsızdır. Bu analizler geçmişi özetler, geleceği tahmin etmez. Geriye dönük testlerde hiçbir analiz rastgele oynamaktan daha iyi sonuç vermedi. Oynayacaksanız, kaybetmeyi göze alabileceğiniz bir bütçeyle oynayın.
 
 ## Kullanım
