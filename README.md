@@ -1,3 +1,5 @@
+![520 – Süper Loto](520.png)
+
 # Süper Loto
 
 Süper Loto (6/60) çekiliş sonuçlarını indiren, analiz eden ve 60 numaranın hepsini kullanan 10 kolon öneren bir Python scripti. Sadece Python standart kütüphanesini kullanır; kurulum gerektirmez.
