@@ -1,0 +1,45 @@
+name: Süper Loto güncelleme
+
+# Süper Loto çekilişleri Salı, Perşembe ve Pazar akşamları yapılır.
+# Ertesi sabah (Pzt/Çar/Cuma 08:23 TR = 05:23 UTC) yeni sonuçları çeker.
+on:
+  schedule:
+    - cron: "23 5 * * 1,3,5"
+  workflow_dispatch: {}  # Actions sekmesinden elle çalıştırmak için
+
+permissions:
+  contents: write
+
+concurrency:
+  group: superloto
+  cancel-in-progress: false
+
+jobs:
+  guncelle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Sonuçları indir ve analiz et
+        run: |
+          python3 superloto.py > superloto_rapor.txt
+          echo >> superloto_rapor.txt
+          python3 superloto.py --analiz --yillik >> superloto_rapor.txt
+
+      - name: Değişiklik varsa kaydet
+        run: |
+          if git diff --quiet -- superloto.csv; then
+            echo "Yeni çekiliş yok."
+            exit 0
+          fi
+          son=$(tail -n 1 superloto.csv | cut -d, -f1,2)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add superloto.csv superloto_rapor.txt
+          git commit -m "Süper Loto sonuçlarını güncelle (son çekiliş: $son)"
+          git push
