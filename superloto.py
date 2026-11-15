@@ -8,6 +8,7 @@ Kullanım:
     python3 superloto.py --yil 2026 # analizi sadece 2026 çekilişleriyle yap
     python3 superloto.py --yillik   # yıllara göre özet tablo
     python3 superloto.py --kolon    # 60 numaranın hepsini kullanan 10 kolon öner
+    python3 superloto.py --taklitci # son 1 yılın çekilişlerini taklit eden 10 kolon
 
 Sonuçlar superloto.csv dosyasına kaydedilir; sonraki çalıştırmalarda sadece
 yeni çekilişler indirilir. Sadece Python standart kütüphanesi kullanılır.
@@ -492,6 +493,130 @@ def kolon_aciklama(an: dict) -> None:
     print("  kurallı ve rastgele kolonlar aynı sonucu verdi.")
 
 
+def dizilim(toplar: list[int]) -> dict:
+    """Bir çekilişin "oynanış biçimi": onlu dağılımı, tek sayısı, ardışık
+    ikili sayısı, aynı son haneli fazlalık ve toplam."""
+    k = sorted(toplar)
+    onlu = Counter((t - 1) // 10 for t in k)
+    return {
+        "onlu": tuple(onlu[d] for d in range(6)),
+        "tek": sum(t % 2 for t in k),
+        "ardisik": sum(1 for a, b in zip(k, k[1:]) if b - a == 1),
+        "son_hane": 6 - len({t % 10 for t in k}),
+        "toplam": sum(k),
+    }
+
+
+def taklit_sablonlari(cekilisler: list[dict], rng: random.Random,
+                      donem: int = 156, adim: int = 20000) -> list[dict]:
+    """Son `donem` çekilişten 10 şablon seçer. Seçilen 10 çekilişin onlu
+    dağılımları toplamı her onlukta tam 10, tek sayıları toplamı tam 30
+    olmalıdır; böylece 60 numaranın hepsi bu şablonlarla kullanılabilir."""
+    havuz = cekilisler[-donem:]
+    bicimler = [dizilim(c["toplar"]) for c in havuz]
+
+    def ceza(secim):
+        onlu = [sum(bicimler[i]["onlu"][d] for i in secim) for d in range(6)]
+        tek = sum(bicimler[i]["tek"] for i in secim)
+        return sum(abs(o - 10) for o in onlu) + abs(tek - 30)
+
+    while True:
+        secim = rng.sample(range(len(havuz)), 10)
+        c = ceza(secim)
+        for _ in range(adim):
+            if c == 0:
+                return [havuz[i] for i in secim]
+            j = rng.randrange(10)
+            aday = rng.randrange(len(havuz))
+            if aday in secim:
+                continue
+            eski = secim[j]
+            secim[j] = aday
+            yeni = ceza(secim)
+            if yeni <= c:
+                c = yeni
+            else:
+                secim[j] = eski
+
+
+def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
+                onceki: list[list[int]] | None = None, tolerans: int = 6,
+                adim: int = 60000, deneme: int = 50) -> list[tuple[list[int], dict]]:
+    """Taklitçi kural: her kolon, son 1 yılın gerçek bir çekilişinin dizilimini
+    taklit eder. Onlu dağılım birebir, tek sayısı, ardışık ikili ve aynı son
+    hane sayısı birebir, toplam ±`tolerans` içinde aynıdır. 60 numaranın her
+    biri tam bir kez kullanılır; `onceki` verilirse her kolon önceki
+    kolonların her biriyle en fazla 2 numara paylaşır."""
+    rng = random.Random(tohum)
+    onceki_kumeler = [set(k) for k in onceki or []]
+    for _ in range(deneme):
+        sablonlar = taklit_sablonlari(cekilisler, rng)
+        hedef = [dizilim(s["toplar"]) for s in sablonlar]
+
+        def ceza(i, kolon):
+            d, h = dizilim(kolon), hedef[i]
+            return (abs(d["tek"] - h["tek"]) + abs(d["ardisik"] - h["ardisik"])
+                    + abs(d["son_hane"] - h["son_hane"])
+                    + (max(0, abs(d["toplam"] - h["toplam"]) - tolerans) + 4) // 5
+                    + sum(max(0, len(set(kolon) & o) - 2) for o in onceki_kumeler))
+
+        # Her onluğun 10 numarası, şablonların o onluktaki adedine göre dağıtılır.
+        kolonlar: list[list[int]] = [[] for _ in range(10)]
+        for d in range(6):
+            numaralar = list(range(d * 10 + 1, d * 10 + 11))
+            rng.shuffle(numaralar)
+            for i, h in enumerate(hedef):
+                for _ in range(h["onlu"][d]):
+                    kolonlar[i].append(numaralar.pop())
+        cezalar = [ceza(i, k) for i, k in enumerate(kolonlar)]
+        for _ in range(adim):
+            if not any(cezalar):
+                break
+            # Aynı onluktan iki numarayı takas et: onlu dağılım bozulmaz.
+            a, b = rng.sample(range(10), 2)
+            i = rng.randrange(6)
+            d = (kolonlar[a][i] - 1) // 10
+            secenek = [j for j, t in enumerate(kolonlar[b]) if (t - 1) // 10 == d]
+            if not secenek:
+                continue
+            j = rng.choice(secenek)
+            kolonlar[a][i], kolonlar[b][j] = kolonlar[b][j], kolonlar[a][i]
+            ya, yb = ceza(a, kolonlar[a]), ceza(b, kolonlar[b])
+            if ya + yb <= cezalar[a] + cezalar[b]:
+                cezalar[a], cezalar[b] = ya, yb
+            else:
+                kolonlar[a][i], kolonlar[b][j] = kolonlar[b][j], kolonlar[a][i]
+        if not any(cezalar):
+            return [(sorted(k), s) for k, s in zip(kolonlar, sablonlar)]
+    raise RuntimeError("Taklitçi kurala uyan ve öncekilerden farklı bir düzen bulunamadı. "
+                       "Bu çekiliş için kolon geçmişini --sifirla ile temizleyebilirsiniz.")
+
+
+def taklit_yazdir(sonuc: list[tuple[list[int], dict]], baslik: str) -> None:
+    print(baslik)
+    print(f"  {'#':>2}  {'Kolon':<29}{'Tek':>4}{'Ard':>4}{'Top':>5}   "
+          f"Taklit edilen çekiliş")
+    for i, (k, s) in enumerate(sonuc, 1):
+        d = dizilim(k)
+        sablon = " - ".join(f"{t:2d}" for t in s["toplar"])
+        print(f"  {i:>2}  {' - '.join(f'{t:2d}' for t in k):<29}"
+              f"{d['tek']:>4}{d['ardisik']:>4}{d['toplam']:>5}   "
+              f"#{s['no']} {s['tarih']}: {sablon} (toplam {sum(s['toplar'])})")
+    kullanilan = sorted(t for k, _ in sonuc for t in k)
+    assert kullanilan == list(SAYI_ARALIGI), "her numara tam bir kez kullanılmalı"
+
+
+def taklit_aciklama() -> None:
+    print("  Taklitçi kural:")
+    print("  - Her kolon, son 1 yılın (156 çekiliş) gerçek bir çekilişinin dizilimini taklit eder.")
+    print("  - Birebir aynı: hangi onluktan kaç sayı geldiği, tek sayı adedi, ardışık ikili")
+    print("    adedi ve aynı son haneli sayı adedi. Toplam en fazla ±6 farklı.")
+    print("  - 60 numaranın hepsi tam bir kez kullanılır; şablon çekilişler buna uygun seçilir.")
+    print("  - Farklı düzen: aynı çekiliş için verilen her yeni kolon, daha önce verilen")
+    print("    kolonların her biriyle en fazla 2 numara paylaşır.")
+    print("  Not: Geçmişin dizilimini taklit etmek kazanma ihtimalini değiştirmez.")
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--analiz", action="store_true", help="indirmeden sadece analiz yap")
@@ -502,6 +627,8 @@ def main() -> None:
                    help="60 numaranın hepsini kullanan 10 kolon öner")
     p.add_argument("--tohum", type=int,
                    help="--kolon için tohum (aynı tohum aynı kolonları verir; geçmiş kullanılmaz)")
+    p.add_argument("--taklitci", action="store_true",
+                   help="taklitçi kural: her kolon son 1 yılın gerçek bir çekilişinin dizilimini taklit eder")
     p.add_argument("--set", type=int, default=1,
                    help="--kolon ile kaç farklı 10'lu kolon seti üretileceği")
     p.add_argument("--sifirla", action="store_true",
@@ -510,7 +637,7 @@ def main() -> None:
 
     veri = csv_oku() if a.analiz else guncelle()
     cekilisler = [veri[k] for k in sorted(veri)]
-    if a.kolon:
+    if a.kolon or a.taklitci:
         an = numara_analizi(cekilisler)
         son = cekilisler[-1]
         tarih = an["sonraki_tarih"]
@@ -521,17 +648,24 @@ def main() -> None:
               f"{len(onceki)}\n")
         for n in range(a.set):
             tohum = None if a.tohum is None else a.tohum + n
+            baslik = f"Set {len(onceki) // 10 + 1}: 60 numaranın hepsini kullanan 10 kolon"
             try:
-                kolonlar = kolon_uret(an, tohum, onceki)
+                if a.taklitci:
+                    sonuc = taklit_uret(cekilisler, tohum, onceki)
+                    kolonlar = [k for k, _ in sonuc]
+                else:
+                    kolonlar = kolon_uret(an, tohum, onceki)
             except RuntimeError as e:
                 sys.exit(str(e))
-            kolon_yazdir(kolonlar, an, f"Set {len(onceki) // 10 + 1}: "
-                         "60 numaranın hepsini kullanan 10 kolon")
+            if a.taklitci:
+                taklit_yazdir(sonuc, baslik + " (taklitçi)")
+            else:
+                kolon_yazdir(kolonlar, an, baslik)
             print()
             onceki = onceki + kolonlar
             if gecmisli:
                 gecmis_yaz(tarih, onceki)
-        kolon_aciklama(an)
+        taklit_aciklama() if a.taklitci else kolon_aciklama(an)
         return
     if a.yillik:
         yillik_ozet(cekilisler)

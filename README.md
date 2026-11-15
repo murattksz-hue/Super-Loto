@@ -18,6 +18,8 @@ python3 superloto.py --kolon            # 60 numaranın hepsini kullanan 10 kolo
 python3 superloto.py --kolon --set 3    # tek seferde birbirinden farklı 3 set (30 kolon)
 python3 superloto.py --kolon --sifirla  # bu çekiliş için verilen kolonları unut
 python3 superloto.py --kolon --tohum 5  # aynı tohum her seferinde aynı kolonları verir
+python3 superloto.py --taklitci         # son 1 yılın çekilişlerini taklit eden 10 kolon
+python3 superloto.py --taklitci --set 3 # taklitçi kuralla birbirinden farklı 3 set
 ```
 
 ## Analiz raporu
@@ -43,6 +45,18 @@ python3 superloto.py --kolon --tohum 5  # aynı tohum her seferinde aynı kolonl
 - **Farklı düzen:** Script, aynı çekiliş için verdiği kolonları `kolon_gecmisi.json` dosyasında hatırlar. Yeni istenen her set, daha önce verilen kolonların her biriyle en fazla 2 numara paylaşır. Bir sonraki çekilişe geçildiğinde bu hafıza kendiliğinden sıfırlanır. `--tohum` verilirse hafıza kullanılmaz.
 
 Bu kurallar kazanma ihtimalini değiştirmez; seçimi düzenli hale getirir.
+
+## Taklitçi kural (`--taklitci`)
+
+Geleceği göremeyiz ama geçmişte çıkan sayıların geliş biçimini taklit edebiliriz. Her kolon, son 1 yılın (156 çekiliş) gerçek bir çekilişini şablon alır ve onun dizilimini taklit eder:
+
+- **Birebir aynı:** hangi onluktan kaç sayı geldiği, tek sayı adedi, ardışık ikili adedi ve aynı son haneli sayı adedi.
+- **Yakın:** 6 numaranın toplamı, şablonunkinden en fazla ±6 farklı.
+- 60 numaranın hepsi yine tam bir kez kullanılır. Bunun için 10 şablon çekiliş, onluk dağılımları ve tek sayıları 60 numarayı tam dolduracak şekilde seçilir.
+- Çıktıda her kolonun yanında taklit ettiği çekilişin tarihi ve numaraları yazar.
+- Farklı düzen kuralı burada da geçerlidir: aynı çekiliş için verilen her yeni kolon, öncekilerin her biriyle en fazla 2 numara paylaşır.
+
+Geriye dönük testte (828 çekiliş) taklitçi kolonlar rastgele kolonlarla şans payı içinde aynı sonucu verdi.
 
 ## Dosyalar
 
