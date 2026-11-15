@@ -624,6 +624,12 @@ def taklit_sablonlari(cekilisler: list[dict], rng: random.Random, gun: int, ay: 
                     secim[j] = eski_secim
         if yedek is not None:
             return yedek, ad
+    if haric:
+        # Kullanılmamış uygun şablon kalmadıysa, önceki setlerin şablonlarına da izin ver.
+        # (Kolonlar yine farklı olur: farklı düzen kuralı ayrıca uygulanır.)
+        sablonlar, ad = taklit_sablonlari(cekilisler, rng, gun, ay, son_yil_adet, donem,
+                                          frozenset(), adim, deneme, kemik)
+        return sablonlar, ad + "; şablonlar önceki setlerle ortak olabilir"
     raise RuntimeError("Uygun şablon çekilişler bulunamadı.")
 
 
