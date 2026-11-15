@@ -9,6 +9,7 @@ Kullanım:
     python3 superloto.py --yillik   # yıllara göre özet tablo
     python3 superloto.py --kolon    # 60 numaranın hepsini kullanan 10 kolon öner
     python3 superloto.py --taklitci # geçmiş çekilişleri (son yıl ağırlıklı) taklit eden 10 kolon
+    python3 superloto.py --hepsi    # tüm kurallar birlikte (oynarken önerilen)
 
 Sonuçlar superloto.csv dosyasına kaydedilir; sonraki çalıştırmalarda sadece
 yeni çekilişler indirilir. Sadece Python standart kütüphanesi kullanılır.
@@ -352,15 +353,10 @@ def numara_analizi(cekilisler: list[dict]) -> dict:
             "sonraki_gun": GUNLER[sonraki_gun], "sonraki_tarih": sonraki.isoformat()}
 
 
-def kolon_ceza(kolon: list[int], an: dict) -> int:
-    """Kolonun kurallardan ne kadar saptığı (0 = bütün kurallara uyuyor).
-
-    Kemik yapı: 2–4 tek sayı, 1–30 arasından 2–4 sayı, aynı onluda en fazla 2,
-    aynı son haneden en fazla 2, toplam 150–215, en fazla 1 ardışık ikili,
-    son çekilişten en fazla 2 numara.
-    Dağılım: güçlü/orta/zayıf numaralardan ikişer, en uzun süredir çıkmayan
-    10 numaradan en fazla 1.
-    """
+def kemik_ceza(kolon: list[int], son_cekilis: set[int]) -> int:
+    """Kemik yapıdan sapma (0 = uyuyor): 2–4 tek sayı, 1–30 arasından 2–4 sayı,
+    aynı onluda en fazla 2, aynı son haneden en fazla 2, toplam 150–215,
+    en fazla 1 ardışık ikili, son çekilişten en fazla 2 numara."""
     k = sorted(kolon)
     tek = sum(t % 2 for t in k)
     dusuk = sum(t <= 30 for t in k)
@@ -368,14 +364,25 @@ def kolon_ceza(kolon: list[int], an: dict) -> int:
     son_hane = max(Counter(t % 10 for t in k).values())
     toplam = sum(k)
     ardisik = sum(1 for a, b in zip(k, k[1:]) if b - a == 1)
-    tekrar = len(an["son"] & set(k))
-    seviye = Counter(an["seviye"][t] for t in k)
-    gecikme = len(an["gecikme"] & set(k))
+    tekrar = len(son_cekilis & set(k))
     return (max(0, 2 - tek, tek - 4) + max(0, 2 - dusuk, dusuk - 4)
             + max(0, onlu - 2) + max(0, son_hane - 2)
             + (max(0, 150 - toplam, toplam - 215) + 4) // 5
-            + max(0, ardisik - 1) + max(0, tekrar - 2)
-            + sum(abs(seviye[s] - 2) for s in "GOZ") + max(0, gecikme - 1))
+            + max(0, ardisik - 1) + max(0, tekrar - 2))
+
+
+def dagilim_ceza(kolon: list[int], an: dict) -> int:
+    """Güç dengesi (güçlü/orta/zayıf ikişer) ve uzun süredir çıkmayanlardan
+    en fazla 1 kuralından sapma."""
+    seviye = Counter(an["seviye"][t] for t in kolon)
+    return (sum(abs(seviye[s] - 2) for s in "GOZ")
+            + max(0, len(an["gecikme"] & set(kolon)) - 1))
+
+
+def kolon_ceza(kolon: list[int], an: dict) -> int:
+    """Kolonun kurallardan ne kadar saptığı (0 = bütün kurallara uyuyor):
+    kemik yapı + güç dengesi + uzun süredir çıkmayanların dağılımı."""
+    return kemik_ceza(kolon, an["son"]) + dagilim_ceza(kolon, an)
 
 
 def ikili_puani(kolon: list[int], an: dict) -> int:
@@ -524,14 +531,14 @@ def dizilim(toplar: list[int], onceki: list[int] | None = None) -> dict:
 def taklit_sablonlari(cekilisler: list[dict], rng: random.Random, gun: int, ay: int,
                       son_yil_adet: int = 7, donem: int = 156,
                       haric: set[int] = frozenset(), adim: int = 20000,
-                      deneme: int = 6) -> tuple[list[dict], str]:
+                      deneme: int = 6, kemik: bool = False) -> tuple[list[dict], str]:
     """10 şablon çekiliş seçer; hangi seçim seviyesinin kullanıldığını da döndürür.
 
     `son_yil_adet` şablon son `donem` çekilişten (son 1 yıl), kalanı önceki
     yıllardan gelir. Önce sonraki çekilişle aynı gün (eski yıllar için aynı gün
     ve aynı ay) denenir; olmazsa koşullar adım adım gevşetilir. `haric`
     içindeki çekilişler (aynı çekiliş için önceki setlerde kullanılanlar)
-    seçilmez.
+    seçilmez. `kemik` True ise yalnızca kemik yapıya uyan çekilişler şablon olur.
 
     Zorunlu: onlu dağılımlar toplamı her onlukta 10 ve tek sayılar toplamı 30
     (60 numara tam dolsun diye). Tercih edilen: asal sayılar toplamı 17 (1–60
@@ -545,6 +552,8 @@ def taklit_sablonlari(cekilisler: list[dict], rng: random.Random, gun: int, ay: 
     for i in range(1, len(cekilisler)):
         c = cekilisler[i]
         if c["no"] in haric:
+            continue
+        if kemik and kemik_ceza(c["toplar"], set(cekilisler[i - 1]["toplar"])):
             continue
         tarih = datetime.date.fromisoformat(c["tarih"])
         adaylar.append({"cekilis": c, "yeni": i >= len(cekilisler) - donem,
@@ -641,7 +650,7 @@ def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
                 onceki: list[list[int]] | None = None,
                 haric_sablon: set[int] = frozenset(), son_yil_adet: int = 7,
                 tolerans: int = 6, adim: int = 80000, deneme: int = 3,
-                sablon_denemesi: int = 8) -> dict:
+                sablon_denemesi: int = 8, an: dict | None = None) -> dict:
     """Taklitçi kural: her kolon gerçek bir çekilişin dizilimini taklit eder.
 
     Zorunlu (her kolonda kesin): onlu dağılım, tek, ardışık ikili, aynı son
@@ -651,6 +660,13 @@ def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
     kadar), ilk ve son top ±3, sıralı toplar arası her aralık ±2.
     60 numara tam bir kez kullanılır. Birkaç şablon setiyle "tavlama" araması
     yapılır ve hedeflere en yakın sonuç döndürülür.
+
+    `an` (numara_analizi sonucu) verilirse "tüm kurallar" modu çalışır:
+    şablonlar yalnızca kemik yapıya uyan çekilişlerden seçilir ve kemik yapı
+    zorunlu olur. Güç dengesi (2 güçlü/2 orta/2 zayıf), uzun süredir
+    çıkmayanlardan en fazla 1 ve birlikte çok çıkanların aynı kolona
+    toplanması (ikili puanı) hedeflere eklenir. Hepsi aynı anda genelde
+    sağlanamadığı için bunlar zorunlu değil, olabildiğince yakın tutulur.
     """
     rng = random.Random(tohum)
     son = cekilisler[-1]
@@ -665,13 +681,35 @@ def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
             break
         sablonlar, seviye = taklit_sablonlari(
             cekilisler, rng, sonraki.weekday(), sonraki.month, son_yil_adet,
-            haric=haric_sablon)
+            haric=haric_sablon, kemik=an is not None)
         hedefler = [bicim[s["no"]] for s in sablonlar]
 
-        def ceza(i, kolon):
-            z, h, _ = taklit_kontrol(kolon, hedefler[i], son["toplar"], tolerans)
-            farkli = sum(max(0, len(set(kolon) & o) - 2) for o in onceki_kumeler)
-            return 100 * (z + farkli) + h
+        def zorunlu(i, kolon):
+            z, _, _ = taklit_kontrol(kolon, hedefler[i], son["toplar"], tolerans)
+            z += sum(max(0, len(set(kolon) & o) - 2) for o in onceki_kumeler)
+            if an is not None:
+                z += kemik_ceza(kolon, an["son"])
+            return z
+
+        def hedef(i, kolon):
+            _, h, _ = taklit_kontrol(kolon, hedefler[i], son["toplar"], tolerans)
+            if an is None:
+                return h
+            # Güç dengesi ve uzun süredir çıkmayanlar taklit hedeflerinden daha
+            # önemli tutulur; ikili puanı arttıkça ceza biraz azalır.
+            return h + 10 * dagilim_ceza(kolon, an) - ikili_puani(kolon, an) / 200
+
+        def takas_dene(kolonlar):
+            a, b = rng.sample(range(10), 2)
+            i = rng.randrange(6)
+            d = (kolonlar[a][i] - 1) // 10
+            secenek = [j for j, t in enumerate(kolonlar[b]) if (t - 1) // 10 == d]
+            if not secenek:
+                return None
+            # Yalnızca aynı onluktan numaralar takas edilir: onlu dağılım korunur.
+            j = rng.choice(secenek)
+            kolonlar[a][i], kolonlar[b][j] = kolonlar[b][j], kolonlar[a][i]
+            return a, b, i, j
 
         kolonlar: list[list[int]] = [[] for _ in range(10)]
         for d in range(6):
@@ -680,65 +718,116 @@ def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
             for i, h in enumerate(hedefler):
                 for _ in range(h["onlu"][d]):
                     kolonlar[i].append(numaralar.pop())
+
+        # 1. aşama: zorunlu kurallar. Taklitçi modunda hedefler de birlikte izlenir;
+        # tüm kurallar modunda hedefler yalnızca 2. aşamada iyileştirilir.
+        def ceza(i, k):
+            return 100 * zorunlu(i, k) + (hedef(i, k) if an is None else 0)
         cezalar = [ceza(i, k) for i, k in enumerate(kolonlar)]
+        zor = [zorunlu(i, k) for i, k in enumerate(kolonlar)]
         for adim_no in range(adim):
-            if not any(cezalar):
+            if not any(zor) and (an is not None or not any(cezalar)):
                 break
             sicaklik = 3.0 * (1 - adim_no / adim) + 0.05
-            sorunlu = [i for i in range(10) if cezalar[i]]
-            a = rng.choice(sorunlu) if rng.random() < 0.7 else rng.randrange(10)
-            b = rng.choice([i for i in range(10) if i != a])
-            i = rng.randrange(6)
-            d = (kolonlar[a][i] - 1) // 10
-            secenek = [j for j, t in enumerate(kolonlar[b]) if (t - 1) // 10 == d]
-            if not secenek:
+            t = takas_dene(kolonlar)
+            if t is None:
                 continue
-            # Yalnızca aynı onluktan numaralar takas edilir: onlu dağılım korunur.
-            j = rng.choice(secenek)
-            kolonlar[a][i], kolonlar[b][j] = kolonlar[b][j], kolonlar[a][i]
+            a, b, i, j = t
             ya, yb = ceza(a, kolonlar[a]), ceza(b, kolonlar[b])
             fark = ya + yb - cezalar[a] - cezalar[b]
             if fark <= 0 or rng.random() < math.exp(-fark / sicaklik):
                 cezalar[a], cezalar[b] = ya, yb
+                zor[a], zor[b] = zorunlu(a, kolonlar[a]), zorunlu(b, kolonlar[b])
             else:
                 kolonlar[a][i], kolonlar[b][j] = kolonlar[b][j], kolonlar[a][i]
-        cezalar = [ceza(i, k) for i, k in enumerate(kolonlar)]
-        if all(c < 100 for c in cezalar):  # zorunlu kurallar tamam
-            toplam = sum(cezalar)
-            if en_iyi is None or toplam < en_iyi[0]:
-                en_iyi = (toplam, {"kolonlar": [sorted(k) for k in kolonlar],
-                                   "sablonlar": sablonlar, "hedefler": hedefler,
-                                   "seviye": seviye, "son_toplar": son["toplar"],
-                                   "tolerans": tolerans})
-            if toplam == 0:
-                break
+        if any(zorunlu(i, k) for i, k in enumerate(kolonlar)):
+            continue
+
+        # 2. aşama (tüm kurallar modu): zorunlu kurallar hiç bozulmadan hedefler iyileştirilir.
+        if an is not None:
+            puan = [hedef(i, k) for i, k in enumerate(kolonlar)]
+            for adim_no in range(adim):
+                sicaklik = 1.0 * (1 - adim_no / adim) + 0.02
+                t = takas_dene(kolonlar)
+                if t is None:
+                    continue
+                a, b, i, j = t
+                if zorunlu(a, kolonlar[a]) or zorunlu(b, kolonlar[b]):
+                    kolonlar[a][i], kolonlar[b][j] = kolonlar[b][j], kolonlar[a][i]
+                    continue
+                pa, pb = hedef(a, kolonlar[a]), hedef(b, kolonlar[b])
+                fark = pa + pb - puan[a] - puan[b]
+                if fark <= 0 or rng.random() < math.exp(-fark / sicaklik):
+                    puan[a], puan[b] = pa, pb
+                else:
+                    kolonlar[a][i], kolonlar[b][j] = kolonlar[b][j], kolonlar[a][i]
+
+        toplam = sum(hedef(i, k) for i, k in enumerate(kolonlar))
+        if en_iyi is None or toplam < en_iyi[0]:
+            en_iyi = (toplam, {"kolonlar": [sorted(k) for k in kolonlar],
+                               "sablonlar": sablonlar, "hedefler": hedefler,
+                               "seviye": seviye, "son_toplar": son["toplar"],
+                               "tolerans": tolerans})
+        if an is None and toplam == 0:
+            break
     if en_iyi is None:
         raise RuntimeError("Taklitçi kurala uyan ve öncekilerden farklı bir düzen bulunamadı. "
                            "Bu çekiliş için kolon geçmişini --sifirla ile temizleyebilirsiniz.")
     return en_iyi[1]
 
 
-def taklit_yazdir(sonuc: dict, baslik: str) -> None:
+def taklit_yazdir(sonuc: dict, baslik: str, an: dict | None = None) -> None:
     print(baslik)
     print(f"  Şablon seçimi: {sonuc['seviye']}.")
-    print(f"  {'#':>2}  {'Kolon':<29}{'Tek':>4}{'Asal':>5}{'Tkr':>4}{'Top':>5}{'Uyum':>6}   "
+    ek = f"{'G/O/Z':>7}{'Ikl':>5}" if an else ""
+    print(f"  {'#':>2}  {'Kolon':<29}{'Tek':>4}{'Asal':>5}{'Tkr':>4}{'Top':>5}{ek}{'Uyum':>6}   "
           f"Taklit edilen çekiliş")
     toplam_tutan = 0
+    hedef_sayisi = 7 if an else 5
     for i, (k, s, h) in enumerate(zip(sonuc["kolonlar"], sonuc["sablonlar"],
                                       sonuc["hedefler"]), 1):
         d = dizilim(k, sonuc["son_toplar"])
         z, _, tutan = taklit_kontrol(k, h, sonuc["son_toplar"], sonuc["tolerans"])
         assert z == 0, "zorunlu kurallar sağlanmalı"
+        sutun = ""
+        if an:
+            assert kemik_ceza(k, an["son"]) == 0, "kemik yapı sağlanmalı"
+            sev = Counter(an["seviye"][t] for t in k)
+            tutan += sum(abs(sev[x] - 2) for x in "GOZ") == 0
+            tutan += len(an["gecikme"] & set(k)) <= 1
+            karisim = f"{sev['G']}/{sev['O']}/{sev['Z']}"
+            sutun = f"{karisim:>7}{ikili_puani(k, an):>5}"
         toplam_tutan += tutan
         tarih = datetime.date.fromisoformat(s["tarih"])
         sablon = " - ".join(f"{t:2d}" for t in s["toplar"])
         print(f"  {i:>2}  {' - '.join(f'{t:2d}' for t in k):<29}"
-              f"{d['tek']:>4}{d['asal']:>5}{d['tekrar']:>4}{d['toplam']:>5}{f'{tutan}/5':>6}   "
+              f"{d['tek']:>4}{d['asal']:>5}{d['tekrar']:>4}{d['toplam']:>5}{sutun}"
+              f"{f'{tutan}/{hedef_sayisi}':>6}   "
               f"#{s['no']} {s['tarih']} {GUNLER[tarih.weekday()][:3]}: {sablon}")
-    print(f"  Hedef uyumu: {toplam_tutan}/50 "
-          "(asal, son çekilişten tekrar, ilk top, son top, aralık deseni)")
+    ad = "asal, son çekilişten tekrar, ilk top, son top, aralık deseni"
+    if an:
+        ad += ", güç dengesi 2/2/2, uzun süredir çıkmayanlardan en fazla 1"
+    print(f"  Hedef uyumu: {toplam_tutan}/{10 * hedef_sayisi} ({ad})")
     kullanilan = sorted(t for k in sonuc["kolonlar"] for t in k)
     assert kullanilan == list(SAYI_ARALIGI), "her numara tam bir kez kullanılmalı"
+
+
+def hepsi_aciklama(son_yil_adet: int, tolerans: int) -> None:
+    print("  Tüm kurallar modu (--hepsi): taklitçi + analizli kural birlikte.")
+    print("  - Her kolon, kemik yapıya uyan gerçek bir geçmiş çekilişi taklit eder.")
+    print(f"    10 şablondan {son_yil_adet} tanesi son 1 yıldan, {10 - son_yil_adet} tanesi "
+          "önceki yıllardan; aynı gün, eski yıllar için aynı ay öncelikli.")
+    print("  - Zorunlu (her kolonda kesin):")
+    print(f"    taklit: onluk dağılımı, tek, ardışık ikili, aynı son hane birebir; toplam ±{tolerans}")
+    print("    kemik yapı: 2–4 tek, 1–30 arasından 2–4, aynı onluda ve aynı son haneden en fazla 2,")
+    print("    toplam 150–215, en fazla 1 ardışık ikili, son çekilişten en fazla 2 numara")
+    print("    farklı düzen: önceki kolonların her biriyle en fazla 2 ortak numara")
+    print("  - Hedef (olabildiğince yakın, Uyum sütununda): asal adedi, son çekilişten tekrar,")
+    print("    ilk ve son top ±3, aralık deseni ±2, güç dengesi 2 güçlü/2 orta/2 zayıf (G/O/Z),")
+    print("    uzun süredir çıkmayanlardan en fazla 1; ayrıca birlikte çok çıkanlar aynı kolona")
+    print("    toplanır (Ikl = ikili puanı).")
+    print("  - 60 numaranın hepsi tam bir kez kullanılır. Her yeni çekilişle kendini günceller.")
+    print("  Not: Kurallar kazanma ihtimalini değiştirmez; seçimi düzenli hale getirir.")
 
 
 def taklit_aciklama(son_yil_adet: int, tolerans: int) -> None:
@@ -771,6 +860,9 @@ def main() -> None:
                    help="--kolon için tohum (aynı tohum aynı kolonları verir; geçmiş kullanılmaz)")
     p.add_argument("--taklitci", action="store_true",
                    help="taklitçi kural: her kolon gerçek bir çekilişin dizilimini taklit eder")
+    p.add_argument("--hepsi", action="store_true",
+                   help="tüm kurallar: taklitçi + analizli kural (kemik yapı, güç dengesi, "
+                        "uzun süredir çıkmayanlar, birlikte çıkanlar) birlikte")
     p.add_argument("--taklit-oran", type=int, default=7,
                    help="--taklitci: 10 şablondan kaçının son 1 yıldan seçileceği (0-10, varsayılan 7)")
     p.add_argument("--tolerans", type=int, default=6,
@@ -784,6 +876,8 @@ def main() -> None:
 
     veri = csv_oku() if a.analiz else guncelle()
     cekilisler = [veri[k] for k in sorted(veri)]
+    if a.hepsi:
+        a.taklitci = True
     if a.kolon or a.taklitci:
         an = numara_analizi(cekilisler)
         son = cekilisler[-1]
@@ -801,7 +895,9 @@ def main() -> None:
             try:
                 if a.taklitci:
                     sonuc = taklit_uret(cekilisler, tohum, onceki, set(kayit["sablonlar"]),
-                                        a.taklit_oran, a.tolerans)
+                                        a.taklit_oran, a.tolerans,
+                                        an=an if a.hepsi else None,
+                                        **({"adim": 50000, "deneme": 2} if a.hepsi else {}))
                     kolonlar = sonuc["kolonlar"]
                     kayit["sablonlar"] += [s["no"] for s in sonuc["sablonlar"]]
                 else:
@@ -809,7 +905,8 @@ def main() -> None:
             except RuntimeError as e:
                 sys.exit(str(e))
             if a.taklitci:
-                taklit_yazdir(sonuc, baslik + " (taklitçi)")
+                taklit_yazdir(sonuc, baslik + (" (tüm kurallar)" if a.hepsi else " (taklitçi)"),
+                              an if a.hepsi else None)
             else:
                 kolon_yazdir(kolonlar, an, baslik)
             print()
@@ -817,7 +914,12 @@ def main() -> None:
             kayit["kolonlar"] = onceki
             if gecmisli:
                 gecmis_yaz(tarih, kayit)
-        taklit_aciklama(a.taklit_oran, a.tolerans) if a.taklitci else kolon_aciklama(an)
+        if a.hepsi:
+            hepsi_aciklama(a.taklit_oran, a.tolerans)
+        elif a.taklitci:
+            taklit_aciklama(a.taklit_oran, a.tolerans)
+        else:
+            kolon_aciklama(an)
         return
     if a.yillik:
         yillik_ozet(cekilisler)

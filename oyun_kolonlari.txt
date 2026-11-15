@@ -1,0 +1,31 @@
+Son çekiliş #984 (2026-11-12), sonraki çekiliş: 2026-11-15 Pazar. Bu çekiliş için daha önce verilen kolon: 0
+
+Set 1: 60 numaranın hepsini kullanan 10 kolon (tüm kurallar)
+  Şablon seçimi: aynı gün; eski yıllardan aynı ay.
+   #  Kolon                         Tek Asal Tkr  Top  G/O/Z  Ikl  Uyum   Taklit edilen çekiliş
+   1   1 - 13 - 23 - 28 - 35 - 58     4    2   0  158  1/2/3  116   2/7   #862 2026-02-01 Paz:  7 - 17 - 21 - 25 - 32 - 52
+   2   2 - 11 - 17 - 29 - 46 - 55     4    4   1  160  2/2/2  116   5/7   #901 2026-05-03 Paz:  1 - 13 - 19 - 27 - 42 - 56
+   3  15 - 22 - 34 - 36 - 53 - 54     2    1   0  214  0/2/4  108   4/7   #973 2026-10-18 Paz: 16 - 23 - 32 - 38 - 51 - 52
+   4   4 -  7 - 25 - 30 - 39 - 52     3    1   2  157  3/2/1  125   4/7   #841 2025-12-14 Paz:  2 -  9 - 27 - 30 - 36 - 55
+   5   5 - 12 - 27 - 32 - 44 - 56     2    1   2  176  3/1/2  119   3/7   #835 2025-11-30 Paz:  9 - 12 - 22 - 34 - 43 - 56
+   6   3 - 10 - 26 - 31 - 47 - 48     3    3   0  165  2/2/2  123   5/7   #922 2026-06-21 Paz:  5 -  6 - 24 - 37 - 43 - 48
+   7  16 - 20 - 24 - 33 - 49 - 50     2    0   1  192  2/2/2  115   3/7   #859 2026-01-25 Paz: 12 - 20 - 23 - 38 - 49 - 50
+   8   9 - 14 - 19 - 37 - 57 - 60     4    2   0  196  4/2/0  154   2/7   #203 2021-11-16 Sal:  5 - 13 - 20 - 37 - 55 - 60
+   9   6 -  8 - 40 - 41 - 43 - 59     3    3   0  197  2/3/1  140   2/7   #52 2020-11-29 Paz:  3 -  7 - 36 - 49 - 50 - 52
+  10  18 - 21 - 38 - 42 - 45 - 51     3    0   0  215  1/2/3  134   4/7   #512 2023-11-07 Sal: 16 - 24 - 36 - 41 - 45 - 51
+  Hedef uyumu: 34/70 (asal, son çekilişten tekrar, ilk top, son top, aralık deseni, güç dengesi 2/2/2, uzun süredir çıkmayanlardan en fazla 1)
+
+  Tüm kurallar modu (--hepsi): taklitçi + analizli kural birlikte.
+  - Her kolon, kemik yapıya uyan gerçek bir geçmiş çekilişi taklit eder.
+    10 şablondan 7 tanesi son 1 yıldan, 3 tanesi önceki yıllardan; aynı gün, eski yıllar için aynı ay öncelikli.
+  - Zorunlu (her kolonda kesin):
+    taklit: onluk dağılımı, tek, ardışık ikili, aynı son hane birebir; toplam ±6
+    kemik yapı: 2–4 tek, 1–30 arasından 2–4, aynı onluda ve aynı son haneden en fazla 2,
+    toplam 150–215, en fazla 1 ardışık ikili, son çekilişten en fazla 2 numara
+    farklı düzen: önceki kolonların her biriyle en fazla 2 ortak numara
+  - Hedef (olabildiğince yakın, Uyum sütununda): asal adedi, son çekilişten tekrar,
+    ilk ve son top ±3, aralık deseni ±2, güç dengesi 2 güçlü/2 orta/2 zayıf (G/O/Z),
+    uzun süredir çıkmayanlardan en fazla 1; ayrıca birlikte çok çıkanlar aynı kolona
+    toplanır (Ikl = ikili puanı).
+  - 60 numaranın hepsi tam bir kez kullanılır. Her yeni çekilişle kendini günceller.
+  Not: Kurallar kazanma ihtimalini değiştirmez; seçimi düzenli hale getirir.
