@@ -31,15 +31,21 @@ jobs:
           echo >> superloto_rapor.txt
           python3 superloto.py --analiz --yillik >> superloto_rapor.txt
 
+      - name: Sonraki çekiliş için taklitçi kolonları üret
+        run: |
+          # Tohum = sonraki çekilişin numarası: aynı veriyle her zaman aynı kolonlar çıkar.
+          sonraki=$(( $(tail -n 1 superloto.csv | cut -d, -f1) + 1 ))
+          python3 superloto.py --analiz --taklitci --tohum "$sonraki" > taklitci_kolonlar.txt
+
       - name: Değişiklik varsa kaydet
         run: |
-          if git diff --quiet -- superloto.csv; then
+          if git diff --quiet -- superloto.csv taklitci_kolonlar.txt; then
             echo "Yeni çekiliş yok."
             exit 0
           fi
           son=$(tail -n 1 superloto.csv | cut -d, -f1,2)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add superloto.csv superloto_rapor.txt
+          git add superloto.csv superloto_rapor.txt taklitci_kolonlar.txt
           git commit -m "Süper Loto sonuçlarını güncelle (son çekiliş: $son)"
           git push

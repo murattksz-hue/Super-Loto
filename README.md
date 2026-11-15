@@ -20,6 +20,7 @@ python3 superloto.py --kolon --sifirla  # bu çekiliş için verilen kolonları 
 python3 superloto.py --kolon --tohum 5  # aynı tohum her seferinde aynı kolonları verir
 python3 superloto.py --taklitci         # geçmiş çekilişleri (son yıl ağırlıklı) taklit eden 10 kolon
 python3 superloto.py --taklitci --set 3 # taklitçi kuralla birbirinden farklı 3 set
+python3 superloto.py --taklitci --taklit-oran 5  # şablonların 5'i son yıldan, 5'i eski yıllardan
 ```
 
 ## Analiz raporu
@@ -48,22 +49,40 @@ Bu kurallar kazanma ihtimalini değiştirmez; seçimi düzenli hale getirir.
 
 ## Taklitçi kural (`--taklitci`)
 
-Geleceği göremeyiz ama geçmişte çıkan sayıların geliş biçimini taklit edebiliriz. Her kolon, geçmişte gerçekten çıkmış bir çekilişi şablon alır ve onun dizilimini taklit eder. Şablonlar tüm geçmişten seçilir ama son yıl ağırlıklıdır: 10 şablonun 7'si son 1 yıldan (156 çekiliş), 3'ü önceki yıllardan gelir.
+Geleceği göremeyiz ama geçmişte çıkan sayıların geliş biçimini taklit edebiliriz. Her kolon, geçmişte gerçekten çıkmış bir çekilişi şablon alır ve onun dizilimini taklit eder.
 
-- **Birebir aynı:** hangi onluktan kaç sayı geldiği, tek sayı adedi, ardışık ikili adedi ve aynı son haneli sayı adedi.
-- **Yakın:** 6 numaranın toplamı, şablonunkinden en fazla ±6 farklı.
-- 60 numaranın hepsi yine tam bir kez kullanılır. Bunun için 10 şablon çekiliş, onluk dağılımları ve tek sayıları 60 numarayı tam dolduracak şekilde seçilir.
-- Çıktıda her kolonun yanında taklit ettiği çekilişin tarihi ve numaraları yazar.
-- Farklı düzen kuralı burada da geçerlidir: aynı çekiliş için verilen her yeni kolon, öncekilerin her biriyle en fazla 2 numara paylaşır.
+**Şablon seçimi**
+- Tüm geçmişten, son yıl ağırlıklı: 10 şablondan 7'si son 1 yıldan (156 çekiliş), 3'ü önceki yıllardan. Oran `--taklit-oran` ile değiştirilebilir.
+- Öncelik, sonraki çekilişle aynı güne (Salı/Perşembe/Pazar) verilir. Eski yıllardan gelen şablonlar ayrıca aynı aydan seçilir. Uygun şablon bulunamazsa koşullar adım adım gevşetilir.
+- Aynı çekiliş için birden fazla set istendiğinde, önceki setlerde kullanılan şablonlar tekrar kullanılmaz.
 
-Geriye dönük testte (828 çekiliş) taklitçi kolonlar rastgele kolonlarla şans payı içinde aynı sonucu verdi.
+**Zorunlu (her kolonda kesin)**
+- Onluk dağılımı, tek sayı adedi, ardışık ikili adedi ve aynı son haneli sayı adedi şablonla birebir aynı.
+- Toplam en fazla ±6 farklı (`--tolerans` ile değiştirilebilir).
+
+**Hedef (olabildiğince yakın, çıktıdaki "Uyum" sütunu)**
+- Asal sayı adedi.
+- Son çekilişten gelen numara adedi: şablon, kendinden önceki çekilişten kaç numara tekrar ettiyse.
+- İlk ve son top ±3.
+- Aralık deseni: sıralı toplar arasındaki her boşluk ±2.
+
+60 numaranın her birinin tam bir kez kullanılması şartıyla bütün hedefler genelde aynı anda sağlanamaz. Script hedeflere olabildiğince yaklaşır ve her kolonda kaçının tuttuğunu gösterir; ortalama uyum 50 hedeften yaklaşık 29'udur.
+
+Farklı düzen kuralı burada da geçerlidir: aynı çekiliş için verilen her yeni kolon, öncekilerin her biriyle en fazla 2 numara paylaşır.
+
+**Her çekilişle kendini günceller**
+
+Şablon havuzu (son 1 yıl), sonraki çekilişin günü ve ayı ile son çekiliş her çalıştırmada güncel veriden hesaplanır. Otomatik güncelleme de her yeni çekilişten sonra sonraki çekiliş için taklitçi kolonları üretip `taklitci_kolonlar.txt` dosyasına yazar.
+
+Geriye dönük testte taklitçi kolonlar rastgele kolonlarla şans payı içinde aynı sonucu verdi; taklit, kazanma ihtimalini değiştirmez.
 
 ## Dosyalar
 
 - `superloto.py`: script
 - `superloto.csv`: 2 Ağustos 2020'den bu yana bütün Süper Loto çekilişleri (çekiliş no, tarih, 6 numara)
 - `superloto_rapor.txt`: en son analiz raporu ve yıllık özet
+- `taklitci_kolonlar.txt`: sonraki çekiliş için taklitçi kuralla üretilmiş 10 kolon (her çekilişten sonra otomatik güncellenir)
 
 ## Otomatik güncelleme
 
-`.github/workflows/superloto.yml`, her Süper Loto çekilişinin ertesi sabahı (Pazartesi, Çarşamba, Cuma 08:23 TR) scripti çalıştırır. Yeni çekiliş varsa `superloto.csv` ve `superloto_rapor.txt` dosyalarını günceller. Actions sekmesinden "Run workflow" ile elle de çalıştırılabilir.
+`.github/workflows/superloto.yml`, her Süper Loto çekilişinin ertesi sabahı (Pazartesi, Çarşamba, Cuma 08:23 TR) scripti çalıştırır. Yeni çekiliş varsa `superloto.csv` ve `superloto_rapor.txt` dosyalarını günceller, sonraki çekiliş için taklitçi kolonları üretip `taklitci_kolonlar.txt` dosyasına yazar. Actions sekmesinden "Run workflow" ile elle de çalıştırılabilir.
