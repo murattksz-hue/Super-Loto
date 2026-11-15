@@ -8,7 +8,7 @@ Kullanım:
     python3 superloto.py --yil 2026 # analizi sadece 2026 çekilişleriyle yap
     python3 superloto.py --yillik   # yıllara göre özet tablo
     python3 superloto.py --kolon    # 60 numaranın hepsini kullanan 10 kolon öner
-    python3 superloto.py --taklitci # son 1 yılın çekilişlerini taklit eden 10 kolon
+    python3 superloto.py --taklitci # geçmiş çekilişleri (son yıl ağırlıklı) taklit eden 10 kolon
 
 Sonuçlar superloto.csv dosyasına kaydedilir; sonraki çalıştırmalarda sadece
 yeni çekilişler indirilir. Sadece Python standart kütüphanesi kullanılır.
@@ -508,42 +508,47 @@ def dizilim(toplar: list[int]) -> dict:
 
 
 def taklit_sablonlari(cekilisler: list[dict], rng: random.Random,
-                      donem: int = 156, adim: int = 20000) -> list[dict]:
-    """Son `donem` çekilişten 10 şablon seçer. Seçilen 10 çekilişin onlu
-    dağılımları toplamı her onlukta tam 10, tek sayıları toplamı tam 30
+                      donem: int = 156, son_yil_adet: int = 7,
+                      adim: int = 20000) -> list[dict]:
+    """10 şablon çekiliş seçer: `son_yil_adet` tanesi son `donem` çekilişten
+    (son 1 yıl), kalanı daha önceki bütün çekilişlerden. Seçilen 10 çekilişin
+    onlu dağılımları toplamı her onlukta tam 10, tek sayıları toplamı tam 30
     olmalıdır; böylece 60 numaranın hepsi bu şablonlarla kullanılabilir."""
-    havuz = cekilisler[-donem:]
-    bicimler = [dizilim(c["toplar"]) for c in havuz]
+    yeni, eski = cekilisler[-donem:], cekilisler[:-donem]
+    if len(eski) < 10 - son_yil_adet:  # yeterli eski veri yoksa hepsi yeni dönemden
+        yeni, eski, son_yil_adet = cekilisler, [], 10
+    gruplar = [yeni] * son_yil_adet + [eski] * (10 - son_yil_adet)
+    bicim = {id(c): dizilim(c["toplar"]) for c in cekilisler}
 
     def ceza(secim):
-        onlu = [sum(bicimler[i]["onlu"][d] for i in secim) for d in range(6)]
-        tek = sum(bicimler[i]["tek"] for i in secim)
+        onlu = [sum(bicim[id(c)]["onlu"][d] for c in secim) for d in range(6)]
+        tek = sum(bicim[id(c)]["tek"] for c in secim)
         return sum(abs(o - 10) for o in onlu) + abs(tek - 30)
 
     while True:
-        secim = rng.sample(range(len(havuz)), 10)
+        secim = rng.sample(yeni, son_yil_adet) + rng.sample(eski, 10 - son_yil_adet)
         c = ceza(secim)
         for _ in range(adim):
             if c == 0:
-                return [havuz[i] for i in secim]
+                return secim
             j = rng.randrange(10)
-            aday = rng.randrange(len(havuz))
-            if aday in secim:
+            aday = rng.choice(gruplar[j])
+            if any(aday is x for x in secim):
                 continue
-            eski = secim[j]
+            eski_secim = secim[j]
             secim[j] = aday
-            yeni = ceza(secim)
-            if yeni <= c:
-                c = yeni
+            yeni_ceza = ceza(secim)
+            if yeni_ceza <= c:
+                c = yeni_ceza
             else:
-                secim[j] = eski
+                secim[j] = eski_secim
 
 
 def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
                 onceki: list[list[int]] | None = None, tolerans: int = 6,
                 adim: int = 60000, deneme: int = 50) -> list[tuple[list[int], dict]]:
-    """Taklitçi kural: her kolon, son 1 yılın gerçek bir çekilişinin dizilimini
-    taklit eder. Onlu dağılım birebir, tek sayısı, ardışık ikili ve aynı son
+    """Taklitçi kural: her kolon, gerçek bir çekilişin dizilimini taklit eder
+    (10 şablonun 7'si son 1 yıldan, 3'ü önceki yıllardan). Onlu dağılım birebir, tek sayısı, ardışık ikili ve aynı son
     hane sayısı birebir, toplam ±`tolerans` içinde aynıdır. 60 numaranın her
     biri tam bir kez kullanılır; `onceki` verilirse her kolon önceki
     kolonların her biriyle en fazla 2 numara paylaşır."""
@@ -608,7 +613,8 @@ def taklit_yazdir(sonuc: list[tuple[list[int], dict]], baslik: str) -> None:
 
 def taklit_aciklama() -> None:
     print("  Taklitçi kural:")
-    print("  - Her kolon, son 1 yılın (156 çekiliş) gerçek bir çekilişinin dizilimini taklit eder.")
+    print("  - Her kolon, geçmişte gerçekten çıkmış bir çekilişin dizilimini taklit eder.")
+    print("    Son 1 yıl ağırlıklı: 10 şablonun 7'si son 1 yıldan (156 çekiliş), 3'ü önceki yıllardan.")
     print("  - Birebir aynı: hangi onluktan kaç sayı geldiği, tek sayı adedi, ardışık ikili")
     print("    adedi ve aynı son haneli sayı adedi. Toplam en fazla ±6 farklı.")
     print("  - 60 numaranın hepsi tam bir kez kullanılır; şablon çekilişler buna uygun seçilir.")
@@ -628,7 +634,8 @@ def main() -> None:
     p.add_argument("--tohum", type=int,
                    help="--kolon için tohum (aynı tohum aynı kolonları verir; geçmiş kullanılmaz)")
     p.add_argument("--taklitci", action="store_true",
-                   help="taklitçi kural: her kolon son 1 yılın gerçek bir çekilişinin dizilimini taklit eder")
+                   help="taklitçi kural: her kolon gerçek bir çekilişin dizilimini taklit eder "
+                        "(7'si son 1 yıldan, 3'ü önceki yıllardan)")
     p.add_argument("--set", type=int, default=1,
                    help="--kolon ile kaç farklı 10'lu kolon seti üretileceği")
     p.add_argument("--sifirla", action="store_true",

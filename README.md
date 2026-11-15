@@ -18,7 +18,7 @@ python3 superloto.py --kolon            # 60 numaranın hepsini kullanan 10 kolo
 python3 superloto.py --kolon --set 3    # tek seferde birbirinden farklı 3 set (30 kolon)
 python3 superloto.py --kolon --sifirla  # bu çekiliş için verilen kolonları unut
 python3 superloto.py --kolon --tohum 5  # aynı tohum her seferinde aynı kolonları verir
-python3 superloto.py --taklitci         # son 1 yılın çekilişlerini taklit eden 10 kolon
+python3 superloto.py --taklitci         # geçmiş çekilişleri (son yıl ağırlıklı) taklit eden 10 kolon
 python3 superloto.py --taklitci --set 3 # taklitçi kuralla birbirinden farklı 3 set
 ```
 
@@ -48,7 +48,7 @@ Bu kurallar kazanma ihtimalini değiştirmez; seçimi düzenli hale getirir.
 
 ## Taklitçi kural (`--taklitci`)
 
-Geleceği göremeyiz ama geçmişte çıkan sayıların geliş biçimini taklit edebiliriz. Her kolon, son 1 yılın (156 çekiliş) gerçek bir çekilişini şablon alır ve onun dizilimini taklit eder:
+Geleceği göremeyiz ama geçmişte çıkan sayıların geliş biçimini taklit edebiliriz. Her kolon, geçmişte gerçekten çıkmış bir çekilişi şablon alır ve onun dizilimini taklit eder. Şablonlar tüm geçmişten seçilir ama son yıl ağırlıklıdır: 10 şablonun 7'si son 1 yıldan (156 çekiliş), 3'ü önceki yıllardan gelir.
 
 - **Birebir aynı:** hangi onluktan kaç sayı geldiği, tek sayı adedi, ardışık ikili adedi ve aynı son haneli sayı adedi.
 - **Yakın:** 6 numaranın toplamı, şablonunkinden en fazla ±6 farklı.
