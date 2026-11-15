@@ -31,14 +31,10 @@ jobs:
           echo >> superloto_rapor.txt
           python3 superloto.py --analiz --yillik >> superloto_rapor.txt
 
-      - name: Sonraki çekiliş için gezegen saatleri ve oyun kolonları (tüm kurallar)
+      - name: Sonraki çekiliş gününü hazırla (gezegen saatleri)
         run: |
-          # Tohum = sonraki çekilişin numarası: aynı veriyle her zaman aynı kolonlar çıkar.
-          sonraki=$(( $(tail -n 1 superloto.csv | cut -d, -f1) + 1 ))
-          # Dosyanın başında o çekiliş gününün Ankara gezegen saatleri (şanslı saatler) yer alır.
-          python3 superloto.py --analiz --gezegen > oyun_kolonlari.txt
-          echo >> oyun_kolonlari.txt
-          python3 superloto.py --analiz --hepsi --tohum "$sonraki" >> oyun_kolonlari.txt
+          # Kolonlar çekiliş günü ilk Jüpiter saatinde jupiter.yml ile üretilir.
+          python3 superloto.py --analiz --oyun planla
 
       - name: Değişiklik varsa kaydet
         run: |

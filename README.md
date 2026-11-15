@@ -67,7 +67,7 @@ Analizli kural (`--kolon`) ile taklitçi kural (`--taklitci`) birlikte uygulanı
   - Birlikte çok çıkan numaralar aynı kolona toplanır (Ikl sütunu).
 - 60 numaranın hepsi tam bir kez kullanılır.
 
-Bütün kurallar aynı anda genelde sağlanamaz. Bu yüzden önce zorunlu kurallar kesin olarak sağlanır, sonra hedefler bu kurallar bozulmadan olabildiğince iyileştirilir. Otomatik güncelleme her çekilişten sonra bu modla sonraki çekiliş için kolonları üretip `oyun_kolonlari.txt` dosyasına yazar.
+Bütün kurallar aynı anda genelde sağlanamaz. Bu yüzden önce zorunlu kurallar kesin olarak sağlanır, sonra hedefler bu kurallar bozulmadan olabildiğince iyileştirilir. Çekiliş günleri kolonlar bu modla, günün ilk Jüpiter saatinde otomatik üretilip `oyun_kolonlari.txt` dosyasına yazılır.
 
 ## Gezegen saatleri (`--gezegen`)
 
@@ -78,6 +78,14 @@ Geleneksel (Kalde) sisteme göre Ankara için gezegen saatlerini hesaplar (39,93
 - Jüpiter ("büyük talih", ★★) ve Venüs ("küçük talih", ★) saatleri şanslı kabul edilir. Script, satış kapanmadan (21:00) önceki şanslı saatleri ayrıca listeler.
 - Gün doğumu ve batımı birkaç dakika hassasiyetle hesaplanır.
 - `oyun_kolonlari.txt` dosyasının başında, o çekiliş gününün gezegen saatleri yer alır.
+
+### Kolonlar Jüpiter saatinde üretilir
+
+- Her çekilişten sonraki sabah (`superloto.yml`), sonraki çekiliş günü hazırlanır (`--oyun planla`). `oyun_kolonlari.txt` dosyasına o günün gezegen saatleri ve kolonların hangi Jüpiter saatinde üretileceği yazılır.
+- Çekiliş günü (`jupiter.yml`), 07:00–21:00 arasında 10 dakikada bir `--oyun jupiter` çalışır. Script yalnızca Ankara'da günün ilk Jüpiter saatinin içindeyse tüm kurallarla (`--hepsi`) 10 kolonu üretir ve dosyaya üretim saatiyle birlikte yazar.
+- İlk Jüpiter saati kaçırılırsa (ör. GitHub'ın zamanlanmış işi gecikirse) bir sonraki Jüpiter saati beklenir. Satıştan önce başka Jüpiter saati kalmadıysa kolonlar hemen üretilir. Bu durumlar dosyada not edilir.
+- Bir gün için kolonlar bir kez üretilir; sonraki çalıştırmalar dosyaya dokunmaz.
+- GitHub zamanlanmış işleri birkaç dakika, yoğun zamanlarda daha uzun gecikebilir.
 
 Bu geleneksel bir hesaplamadır; çekiliş sonucunu etkilemez.
 
@@ -106,7 +114,7 @@ Farklı düzen kuralı burada da geçerlidir: aynı çekiliş için verilen her 
 
 **Her çekilişle kendini günceller**
 
-Şablon havuzu (son 1 yıl), sonraki çekilişin günü ve ayı ile son çekiliş her çalıştırmada güncel veriden hesaplanır. Otomatik güncelleme her yeni çekilişten sonra sonraki çekiliş için tüm kurallar moduyla kolonları üretip `oyun_kolonlari.txt` dosyasına yazar.
+Şablon havuzu (son 1 yıl), sonraki çekilişin günü ve ayı ile son çekiliş her çalıştırmada güncel veriden hesaplanır. Otomatik oyun kolonları tüm kurallar moduyla, çekiliş günü ilk Jüpiter saatinde üretilir.
 
 Geriye dönük testte taklitçi kolonlar rastgele kolonlarla şans payı içinde aynı sonucu verdi; taklit, kazanma ihtimalini değiştirmez.
 
@@ -115,8 +123,8 @@ Geriye dönük testte taklitçi kolonlar rastgele kolonlarla şans payı içinde
 - `superloto.py`: script
 - `superloto.csv`: 2 Ağustos 2020'den bu yana bütün Süper Loto çekilişleri (çekiliş no, tarih, 6 numara)
 - `superloto_rapor.txt`: en son analiz raporu ve yıllık özet
-- `oyun_kolonlari.txt`: sonraki çekiliş gününün Ankara gezegen saatleri ve tüm kurallarla (`--hepsi`) üretilmiş 10 kolon (her çekilişten sonra otomatik güncellenir)
+- `oyun_kolonlari.txt`: sonraki çekiliş gününün Ankara gezegen saatleri ve çekiliş günü ilk Jüpiter saatinde tüm kurallarla (`--hepsi`) üretilen 10 kolon
 
 ## Otomatik güncelleme
 
-`.github/workflows/superloto.yml`, her Süper Loto çekilişinin ertesi sabahı (Pazartesi, Çarşamba, Cuma 08:23 TR) scripti çalıştırır. Yeni çekiliş varsa `superloto.csv` ve `superloto_rapor.txt` dosyalarını günceller, sonraki çekiliş için tüm kurallarla kolonları üretip `oyun_kolonlari.txt` dosyasına yazar. Actions sekmesinden "Run workflow" ile elle de çalıştırılabilir.
+`.github/workflows/superloto.yml`, her Süper Loto çekilişinin ertesi sabahı (Pazartesi, Çarşamba, Cuma 08:23 TR) scripti çalıştırır. Yeni çekiliş varsa `superloto.csv` ve `superloto_rapor.txt` dosyalarını günceller ve sonraki çekiliş gününü `oyun_kolonlari.txt` dosyasına hazırlar. Kolonları çekiliş günü `.github/workflows/jupiter.yml` ilk Jüpiter saatinde üretir. Actions sekmesinden "Run workflow" ile elle de çalıştırılabilir.

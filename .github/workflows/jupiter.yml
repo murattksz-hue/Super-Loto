@@ -1,0 +1,42 @@
+name: Jüpiter saatinde kolon üret
+
+# Çekiliş günleri (Salı, Perşembe, Pazar) 07:00–21:00 TR arasında 10 dakikada bir çalışır.
+# Script yalnızca Ankara'da günün ilk Jüpiter saatindeyse kolonları üretir
+# (kaçırılırsa bir sonraki Jüpiter saatinde); diğer çalıştırmalarda hiçbir şey yapmaz.
+on:
+  schedule:
+    - cron: "*/10 4-17 * * 0,2,4"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: superloto
+  cancel-in-progress: false
+
+jobs:
+  uret:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Jüpiter saatindeyse kolonları üret
+        run: python3 superloto.py --analiz --oyun jupiter
+
+      - name: Üretildiyse kaydet
+        run: |
+          if git diff --quiet -- oyun_kolonlari.txt; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add oyun_kolonlari.txt
+          git commit -m "Jüpiter saatinde oyun kolonları üretildi ($(grep -m1 '^KOLONLAR:' oyun_kolonlari.txt | cut -c11-40))"
+          git pull --rebase
+          git push

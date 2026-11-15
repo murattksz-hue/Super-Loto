@@ -20,8 +20,10 @@ tahmin etmez.
 """
 
 import argparse
+import contextlib
 import csv
 import datetime
+import io
 import json
 import math
 import random
@@ -930,6 +932,93 @@ def gezegen_yazdir(gun: datetime.date, yer_adi: str = "Ankara") -> None:
     print("  Not: Geleneksel bir hesaplamadır; çekiliş sonucunu etkilemez.")
 
 
+OYUN_PATH = Path(__file__).with_name("oyun_kolonlari.txt")
+
+
+def yakala(fonksiyon, *args, **kwargs) -> str:
+    """Bir yazdırma fonksiyonunun çıktısını metin olarak döndürür."""
+    tampon = io.StringIO()
+    with contextlib.redirect_stdout(tampon):
+        fonksiyon(*args, **kwargs)
+    return tampon.getvalue()
+
+
+def jupiter_saatleri(gun: datetime.date) -> list[dict]:
+    """Satış kapanmadan önce başlayan Jüpiter saatleri (bitiş en geç kapanış)."""
+    kapanis = datetime.datetime.combine(gun, SATIS_KAPANIS)
+    return [dict(s, bit=min(s["bit"], kapanis)) for s in gezegen_saatleri(gun)
+            if s["gezegen"] == "Jüpiter" and s["bas"] < kapanis]
+
+
+def oyun_planla(cekilisler: list[dict]) -> None:
+    """Sonraki çekiliş günü için oyun dosyasını hazırlar: gezegen saatleri ve
+    kolonların ilk Jüpiter saatinde üretileceği notu."""
+    gun = sonraki_cekilis(cekilisler[-1]["tarih"])
+    try:
+        mevcut = OYUN_PATH.read_text(encoding="utf-8")
+    except OSError:
+        mevcut = ""
+    if f"KOLONLAR: {gun.isoformat()} " in mevcut and "üretildi" in mevcut:
+        print(f"{gun}: kolonlar Jüpiter saatinde zaten üretilmiş, dosyaya dokunulmadı.")
+        return
+    j = jupiter_saatleri(gun)
+    plan = (f"KOLONLAR: {gun.isoformat()} çekiliş günü ilk Jüpiter saatinde "
+            f"({j[0]['bas']:%H:%M}–{j[0]['bit']:%H:%M}) üretilecek." if j else
+            f"KOLONLAR: {gun.isoformat()} günü satıştan önce Jüpiter saati yok; "
+            "kolonlar sabah üretilecek.")
+    OYUN_PATH.write_text(yakala(gezegen_yazdir, gun) + "\n" + plan + "\n", encoding="utf-8")
+    print(plan)
+
+
+def oyun_jupiter(cekilisler: list[dict], simdi: datetime.datetime) -> None:
+    """Çekiliş günü Jüpiter saatinde kolonları üretir (gün içinde sık çalıştırılır).
+
+    Kolonlar günün ilk Jüpiter saatinde üretilir. O saat kaçırıldıysa (ör.
+    zamanlanmış iş gecikti) bir sonraki Jüpiter saati beklenir; satıştan önce
+    başka Jüpiter saati kalmadıysa hemen üretilir. Bugün için zaten
+    üretildiyse hiçbir şey yapılmaz.
+    """
+    gun = simdi.date()
+    if gun.weekday() not in CEKILIS_GUNLERI:
+        print(f"{gun}: çekiliş günü değil.")
+        return
+    try:
+        mevcut = OYUN_PATH.read_text(encoding="utf-8")
+    except OSError:
+        mevcut = ""
+    if f"KOLONLAR: {gun.isoformat()} " in mevcut and "üretildi" in mevcut:
+        print(f"{gun}: kolonlar zaten üretilmiş.")
+        return
+    kapanis = datetime.datetime.combine(gun, SATIS_KAPANIS)
+    if simdi >= kapanis:
+        print(f"{gun}: satış kapandı, kolon üretilmedi.")
+        return
+    jup = jupiter_saatleri(gun)
+    simdiki = next((s for s in jup if s["bas"] <= simdi < s["bit"]), None)
+    sonraki = next((s for s in jup if s["bas"] > simdi), None)
+    if simdiki is None and sonraki is not None:
+        print(f"{gun}: Jüpiter saati bekleniyor ({sonraki['bas']:%H:%M}–{sonraki['bit']:%H:%M}).")
+        return
+    if simdiki is not None:
+        not_ = (f"Jüpiter saati {simdiki['bas']:%H:%M}–{simdiki['bit']:%H:%M} içinde, "
+                f"üretim saati {simdi:%H:%M}.")
+        if jup and simdiki is not jup[0]:
+            not_ += f" (İlk Jüpiter saati {jup[0]['bas']:%H:%M} kaçırıldı.)"
+    else:
+        not_ = (f"satıştan önce Jüpiter saati kalmadığı için hemen üretildi, "
+                f"üretim saati {simdi:%H:%M}.")
+    an = numara_analizi(cekilisler)
+    tohum = int(simdi.strftime("%Y%m%d%H%M"))
+    sonuc = taklit_uret(cekilisler, tohum, an=an, adim=50000, deneme=2)
+    metin = (yakala(gezegen_yazdir, gun) + "\n"
+             + f"KOLONLAR: {gun.isoformat()} {not_}\n\n"
+             + yakala(taklit_yazdir, sonuc, "Set 1: 60 numaranın hepsini kullanan 10 kolon "
+                      "(tüm kurallar)", an)
+             + "\n" + yakala(hepsi_aciklama, 7, 6))
+    OYUN_PATH.write_text(metin, encoding="utf-8")
+    print(f"{gun}: kolonlar üretildi — {not_}")
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--analiz", action="store_true", help="indirmeden sadece analiz yap")
@@ -945,6 +1034,10 @@ def main() -> None:
     p.add_argument("--gezegen", action="store_true",
                    help="sonraki çekiliş günü için Ankara gezegen saatleri ve şanslı saatler")
     p.add_argument("--tarih", help="--gezegen için tarih (YYYY-AA-GG); verilmezse sonraki çekiliş günü")
+    p.add_argument("--oyun", choices=["planla", "jupiter"],
+                   help="oyun_kolonlari.txt: 'planla' sonraki çekiliş gününü hazırlar, "
+                        "'jupiter' çekiliş günü Jüpiter saatindeyse kolonları üretir")
+    p.add_argument("--simdi", help="--oyun jupiter için zamanı belirle (YYYY-AA-GGTSS:DD), test için")
     p.add_argument("--hepsi", action="store_true",
                    help="tüm kurallar: taklitçi + analizli kural (kemik yapı, güç dengesi, "
                         "uzun süredir çıkmayanlar, birlikte çıkanlar) birlikte")
@@ -966,6 +1059,15 @@ def main() -> None:
     cekilisler = [veri[k] for k in sorted(veri)]
     if a.gezegen:
         gezegen_yazdir(sonraki_cekilis(cekilisler[-1]["tarih"]))
+        return
+    if a.oyun == "planla":
+        oyun_planla(cekilisler)
+        return
+    if a.oyun == "jupiter":
+        simdi = (datetime.datetime.fromisoformat(a.simdi) if a.simdi else
+                 datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=ANKARA[2])))
+                 .replace(tzinfo=None))
+        oyun_jupiter(cekilisler, simdi)
         return
     if a.hepsi:
         a.taklitci = True
