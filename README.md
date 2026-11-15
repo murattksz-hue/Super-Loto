@@ -20,6 +20,8 @@ python3 superloto.py --kolon --sifirla  # bu çekiliş için verilen kolonları 
 python3 superloto.py --kolon --tohum 5  # aynı tohum her seferinde aynı kolonları verir
 python3 superloto.py --hepsi            # tüm kurallar birlikte: oynarken önerilen
 python3 superloto.py --hepsi --set 3    # tüm kurallarla birbirinden farklı 3 set
+python3 superloto.py --gezegen          # sonraki çekiliş günü Ankara gezegen saatleri
+python3 superloto.py --gezegen --tarih 2026-11-19  # belirli bir gün için
 python3 superloto.py --taklitci         # geçmiş çekilişleri (son yıl ağırlıklı) taklit eden 10 kolon
 python3 superloto.py --taklitci --set 3 # taklitçi kuralla birbirinden farklı 3 set
 python3 superloto.py --taklitci --taklit-oran 5  # şablonların 5'i son yıldan, 5'i eski yıllardan
@@ -67,6 +69,18 @@ Analizli kural (`--kolon`) ile taklitçi kural (`--taklitci`) birlikte uygulanı
 
 Bütün kurallar aynı anda genelde sağlanamaz. Bu yüzden önce zorunlu kurallar kesin olarak sağlanır, sonra hedefler bu kurallar bozulmadan olabildiğince iyileştirilir. Otomatik güncelleme her çekilişten sonra bu modla sonraki çekiliş için kolonları üretip `oyun_kolonlari.txt` dosyasına yazar.
 
+## Gezegen saatleri (`--gezegen`)
+
+Geleneksel (Kalde) sisteme göre Ankara için gezegen saatlerini hesaplar (39,93°K, 32,86°D, UTC+3):
+
+- Gün doğumu ile gün batımı arası 12 gündüz saatine, gün batımı ile ertesi gün doğumu arası 12 gece saatine bölünür. Saatlerin süresi mevsime göre değişir.
+- Günün ilk saatini günün yöneticisi yönetir (Pazar Güneş, Salı Mars, Perşembe Jüpiter...). Sonraki saatler Satürn → Jüpiter → Mars → Güneş → Venüs → Merkür → Ay sırasıyla gelir.
+- Jüpiter ("büyük talih", ★★) ve Venüs ("küçük talih", ★) saatleri şanslı kabul edilir. Script, satış kapanmadan (21:00) önceki şanslı saatleri ayrıca listeler.
+- Gün doğumu ve batımı birkaç dakika hassasiyetle hesaplanır.
+- `oyun_kolonlari.txt` dosyasının başında, o çekiliş gününün gezegen saatleri yer alır.
+
+Bu geleneksel bir hesaplamadır; çekiliş sonucunu etkilemez.
+
 ## Taklitçi kural (`--taklitci`)
 
 Geleceği göremeyiz ama geçmişte çıkan sayıların geliş biçimini taklit edebiliriz. Her kolon, geçmişte gerçekten çıkmış bir çekilişi şablon alır ve onun dizilimini taklit eder.
@@ -101,7 +115,7 @@ Geriye dönük testte taklitçi kolonlar rastgele kolonlarla şans payı içinde
 - `superloto.py`: script
 - `superloto.csv`: 2 Ağustos 2020'den bu yana bütün Süper Loto çekilişleri (çekiliş no, tarih, 6 numara)
 - `superloto_rapor.txt`: en son analiz raporu ve yıllık özet
-- `oyun_kolonlari.txt`: sonraki çekiliş için tüm kurallarla (`--hepsi`) üretilmiş 10 kolon (her çekilişten sonra otomatik güncellenir)
+- `oyun_kolonlari.txt`: sonraki çekiliş gününün Ankara gezegen saatleri ve tüm kurallarla (`--hepsi`) üretilmiş 10 kolon (her çekilişten sonra otomatik güncellenir)
 
 ## Otomatik güncelleme
 

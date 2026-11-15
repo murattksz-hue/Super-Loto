@@ -1,3 +1,39 @@
+Gezegen saatleri — 2026-11-15 Pazar, Ankara (gün yöneticisi: Güneş)
+  Gün doğumu 07:32, gün batımı 17:32. Gündüz saati 50 dk, gece saati 70 dk.
+
+  Kupon için şanslı saatler (satış 21:00'de kapanır):
+    ★  08:22–09:12  Venüs (küçük talih)
+    ★★ 11:42–12:32  Jüpiter (büyük talih)
+    ★  14:12–15:02  Venüs (küçük talih)
+    ★★ 17:32–18:42  Jüpiter (büyük talih)
+
+  Bütün saatler:
+    Gündüz  1. 07:32–08:22  Güneş
+    Gündüz  2. 08:22–09:12  Venüs ★
+    Gündüz  3. 09:12–10:02  Merkür
+    Gündüz  4. 10:02–10:52  Ay
+    Gündüz  5. 10:52–11:42  Satürn
+    Gündüz  6. 11:42–12:32  Jüpiter ★★
+    Gündüz  7. 12:32–13:22  Mars
+    Gündüz  8. 13:22–14:12  Güneş
+    Gündüz  9. 14:12–15:02  Venüs ★
+    Gündüz 10. 15:02–15:52  Merkür
+    Gündüz 11. 15:52–16:42  Ay
+    Gündüz 12. 16:42–17:32  Satürn
+    Gece    1. 17:32–18:42  Jüpiter ★★
+    Gece    2. 18:42–19:53  Mars
+    Gece    3. 19:53–21:03  Güneş
+    Gece    4. 21:03–22:13  Venüs ★
+    Gece    5. 22:13–23:23  Merkür
+    Gece    6. 23:23–00:33  Ay
+    Gece    7. 00:33–01:43  Satürn
+    Gece    8. 01:43–02:53  Jüpiter ★★
+    Gece    9. 02:53–04:03  Mars
+    Gece   10. 04:03–05:13  Güneş
+    Gece   11. 05:13–06:24  Venüs ★
+    Gece   12. 06:24–07:34  Merkür
+  Not: Geleneksel bir hesaplamadır; çekiliş sonucunu etkilemez.
+
 Son çekiliş #984 (2026-11-12), sonraki çekiliş: 2026-11-15 Pazar. Bu çekiliş için daha önce verilen kolon: 0
 
 Set 1: 60 numaranın hepsini kullanan 10 kolon (tüm kurallar)

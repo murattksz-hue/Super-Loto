@@ -10,6 +10,7 @@ Kullanım:
     python3 superloto.py --kolon    # 60 numaranın hepsini kullanan 10 kolon öner
     python3 superloto.py --taklitci # geçmiş çekilişleri (son yıl ağırlıklı) taklit eden 10 kolon
     python3 superloto.py --hepsi    # tüm kurallar birlikte (oynarken önerilen)
+    python3 superloto.py --gezegen  # sonraki çekiliş günü Ankara gezegen saatleri
 
 Sonuçlar superloto.csv dosyasına kaydedilir; sonraki çalıştırmalarda sadece
 yeni çekilişler indirilir. Sadece Python standart kütüphanesi kullanılır.
@@ -854,6 +855,81 @@ def taklit_aciklama(son_yil_adet: int, tolerans: int) -> None:
     print("  Not: Geçmişin dizilimini taklit etmek kazanma ihtimalini değiştirmez.")
 
 
+# Gezegen saatleri (geleneksel Kalde sistemi), Ankara için.
+ANKARA = (39.9334, 32.8597, 3)  # enlem, boylam, UTC farkı (Türkiye: UTC+3)
+SATIS_KAPANIS = datetime.time(21, 0)
+KALDE_SIRASI = ["Satürn", "Jüpiter", "Mars", "Güneş", "Venüs", "Merkür", "Ay"]
+GUN_YONETICISI = {0: "Ay", 1: "Mars", 2: "Merkür", 3: "Jüpiter", 4: "Venüs",
+                  5: "Satürn", 6: "Güneş"}
+SANSLI_GEZEGENLER = {"Jüpiter": "büyük talih", "Venüs": "küçük talih"}
+
+
+def gunes_zamani(gun: datetime.date, dogus: bool, yer=ANKARA) -> datetime.datetime:
+    """Gün doğumu/batımı (NOAA yaklaşımı, birkaç dakika hassasiyet)."""
+    enlem, boylam, utc = yer
+    n = gun.timetuple().tm_yday
+    boylam_saat = boylam / 15
+    t = n + ((6 if dogus else 18) - boylam_saat) / 24
+    m = 0.9856 * t - 3.289
+    l = (m + 1.916 * math.sin(math.radians(m)) + 0.020 * math.sin(math.radians(2 * m))
+         + 282.634) % 360
+    ra = math.degrees(math.atan(0.91764 * math.tan(math.radians(l)))) % 360
+    ra = (ra + (math.floor(l / 90) * 90 - math.floor(ra / 90) * 90)) / 15
+    sin_d = 0.39782 * math.sin(math.radians(l))
+    cos_d = math.cos(math.asin(sin_d))
+    cos_h = ((math.cos(math.radians(90.833)) - sin_d * math.sin(math.radians(enlem)))
+             / (cos_d * math.cos(math.radians(enlem))))
+    h = math.degrees(math.acos(cos_h))
+    h = (360 - h if dogus else h) / 15
+    ut = (h + ra - 0.06571 * t - 6.622 - boylam_saat) % 24
+    return (datetime.datetime.combine(gun, datetime.time())
+            + datetime.timedelta(hours=(ut + utc) % 24))
+
+
+def gezegen_saatleri(gun: datetime.date, yer=ANKARA) -> list[dict]:
+    """Günün 24 gezegen saati: gündüz 12 (gün doğumu–batımı), gece 12
+    (gün batımı–ertesi gün doğumu). İlk saati günün yöneticisi yönetir."""
+    dogus, batis = gunes_zamani(gun, True, yer), gunes_zamani(gun, False, yer)
+    ertesi = gunes_zamani(gun + datetime.timedelta(days=1), True, yer)
+    gunduz, gece = (batis - dogus) / 12, (ertesi - batis) / 12
+    ilk = KALDE_SIRASI.index(GUN_YONETICISI[gun.weekday()])
+    saatler = []
+    for i in range(24):
+        bas = dogus + gunduz * i if i < 12 else batis + gece * (i - 12)
+        saatler.append({"bas": bas, "bit": bas + (gunduz if i < 12 else gece),
+                        "gezegen": KALDE_SIRASI[(ilk + i) % 7], "gunduz": i < 12,
+                        "sira": i % 12 + 1})
+    return saatler
+
+
+def gezegen_yazdir(gun: datetime.date, yer_adi: str = "Ankara") -> None:
+    saatler = gezegen_saatleri(gun)
+    kapanis = datetime.datetime.combine(gun, SATIS_KAPANIS)
+    print(f"Gezegen saatleri — {gun.isoformat()} {GUNLER[gun.weekday()]}, {yer_adi} "
+          f"(gün yöneticisi: {GUN_YONETICISI[gun.weekday()]})")
+    print(f"  Gün doğumu {saatler[0]['bas']:%H:%M}, gün batımı {saatler[12]['bas']:%H:%M}. "
+          f"Gündüz saati {round((saatler[0]['bit'] - saatler[0]['bas']).seconds / 60)} dk, "
+          f"gece saati {round((saatler[12]['bit'] - saatler[12]['bas']).seconds / 60)} dk.")
+    print(f"\n  Kupon için şanslı saatler (satış {SATIS_KAPANIS:%H:%M}'de kapanır):")
+    var = False
+    for s in saatler:
+        if s["gezegen"] in SANSLI_GEZEGENLER and s["bas"] < kapanis:
+            var = True
+            bit = min(s["bit"], kapanis)
+            yildiz = "★★" if s["gezegen"] == "Jüpiter" else "★ "
+            not_ = " (satış kapanışına kadar)" if s["bit"] > kapanis else ""
+            print(f"    {yildiz} {s['bas']:%H:%M}–{bit:%H:%M}  {s['gezegen']} "
+                  f"({SANSLI_GEZEGENLER[s['gezegen']]}){not_}")
+    if not var:
+        print("    Satış kapanmadan önce Jüpiter ya da Venüs saati yok.")
+    print("\n  Bütün saatler:")
+    for s in saatler:
+        isaret = {"Jüpiter": " ★★", "Venüs": " ★"}.get(s["gezegen"], "")
+        print(f"    {'Gündüz' if s['gunduz'] else 'Gece  '} {s['sira']:2d}. "
+              f"{s['bas']:%H:%M}–{s['bit']:%H:%M}  {s['gezegen']}{isaret}")
+    print("  Not: Geleneksel bir hesaplamadır; çekiliş sonucunu etkilemez.")
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--analiz", action="store_true", help="indirmeden sadece analiz yap")
@@ -866,6 +942,9 @@ def main() -> None:
                    help="--kolon için tohum (aynı tohum aynı kolonları verir; geçmiş kullanılmaz)")
     p.add_argument("--taklitci", action="store_true",
                    help="taklitçi kural: her kolon gerçek bir çekilişin dizilimini taklit eder")
+    p.add_argument("--gezegen", action="store_true",
+                   help="sonraki çekiliş günü için Ankara gezegen saatleri ve şanslı saatler")
+    p.add_argument("--tarih", help="--gezegen için tarih (YYYY-AA-GG); verilmezse sonraki çekiliş günü")
     p.add_argument("--hepsi", action="store_true",
                    help="tüm kurallar: taklitçi + analizli kural (kemik yapı, güç dengesi, "
                         "uzun süredir çıkmayanlar, birlikte çıkanlar) birlikte")
@@ -880,8 +959,14 @@ def main() -> None:
                    help="--kolon: bu çekiliş için daha önce verilen kolonları unut")
     a = p.parse_args()
 
+    if a.gezegen and a.tarih:
+        gezegen_yazdir(datetime.date.fromisoformat(a.tarih))
+        return
     veri = csv_oku() if a.analiz else guncelle()
     cekilisler = [veri[k] for k in sorted(veri)]
+    if a.gezegen:
+        gezegen_yazdir(sonraki_cekilis(cekilisler[-1]["tarih"]))
+        return
     if a.hepsi:
         a.taklitci = True
     if a.kolon or a.taklitci:
