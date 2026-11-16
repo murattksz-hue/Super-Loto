@@ -1,0 +1,30 @@
+name: Panoyu güncelle
+
+# Pano verisini (issue #12 ve #13) main'e elle gönderilen değişikliklerde
+# ya da Actions sekmesinden elle günceller. Otomatik güncellemeler bunu
+# superloto.yml ve jupiter.yml içinde kendileri yapar.
+on:
+  push:
+    branches: [main]
+    paths: [superloto.csv, oyun_kolonlari.txt, pano_guncelle.sh]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: pano
+  cancel-in-progress: true
+
+jobs:
+  pano:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Dosyaları pano issue'larına kopyala
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./pano_guncelle.sh
