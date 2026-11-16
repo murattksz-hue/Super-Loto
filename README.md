@@ -125,6 +125,16 @@ Geriye dönük testte taklitçi kolonlar rastgele kolonlarla şans payı içinde
 - `superloto_rapor.txt`: en son analiz raporu ve yıllık özet
 - `oyun_kolonlari.txt`: sonraki çekiliş gününün Ankara gezegen saatleri ve çekiliş günü ilk Jüpiter saatinde tüm kurallarla (`--hepsi`) üretilen 10 kolon
 
+## Testler
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+- `tests/test_veri.py`: siteden çekilen verinin doğrulanması. Aynı numara iki kez, 1–60 dışında bir numara ya da geçersiz bir tarih gelirse script durur ve CSV'ye hiçbir şey yazmaz.
+- `tests/test_kurallar.py`: kolon kuralları (60 numara / 10 kolon, kemik yapı, farklı düzen, tüm kurallar), gezegen saatleri, Jüpiter saatinde üretim akışı ve bilinen analiz değerleri.
+- `.github/workflows/testler.yml` her PR'da ve `main`'e her gönderimde testleri çalıştırır.
+
 ## Otomatik güncelleme
 
 `.github/workflows/superloto.yml`, her Süper Loto çekilişinin ertesi sabahı (Pazartesi, Çarşamba, Cuma 08:23 TR) scripti çalıştırır. Yeni çekiliş varsa `superloto.csv` ve `superloto_rapor.txt` dosyalarını günceller ve sonraki çekiliş gününü `oyun_kolonlari.txt` dosyasına hazırlar. Kolonları çekiliş günü `.github/workflows/jupiter.yml` ilk Jüpiter saatinde üretir. Actions sekmesinden "Run workflow" ile elle de çalıştırılabilir.
