@@ -29,6 +29,25 @@ class DizilimTest(unittest.TestCase):
         self.assertGreater(sl.kemik_ceza([1, 3, 5, 7, 9, 11], set()), 0)   # 6 tek, aynı onlukta 5
         self.assertGreater(sl.kemik_ceza([1, 2, 30, 40, 50, 60], {1, 2, 30}), 0)  # son çekilişten 3
 
+    def test_gevsek_kemik_yapi(self):
+        # Geçmiş karşılaştırmasından sonra gevşetilen sınırlar.
+        self.assertEqual(sl.kemik_ceza([16, 25, 27, 29, 52, 56], set()), 0)   # aynı onlukta 3
+        self.assertEqual(sl.kemik_ceza([7, 24, 38, 40, 53, 54], set()), 0)    # toplam 216
+        self.assertEqual(sl.kemik_ceza([3, 4, 15, 16, 40, 52], set()), 0)     # 2 ardışık ikili, toplam 130
+        self.assertGreater(sl.kemik_ceza([12, 14, 16, 18, 20, 22], set()), 0)  # 6 çift
+        self.assertGreater(sl.kemik_ceza([33, 41, 45, 50, 55, 59], set()), 0)  # toplam 283
+        self.assertGreater(sl.kemik_ceza([21, 22, 23, 24, 50, 59], set()), 0)  # aynı onlukta 4
+
+    def test_kural_karnesi(self):
+        satirlar = sl.kural_karnesi(CEKILISLER, ornek=5000)
+        adlar = [s["kural"] for s in satirlar]
+        self.assertIn("Kemik yapının tamamı", adlar)
+        for s in satirlar:
+            self.assertTrue(0 <= s["gercek"] <= 1 and 0 <= s["rastgele"] <= 1)
+        kemik = satirlar[adlar.index("Kemik yapının tamamı")]
+        self.assertGreater(kemik["gercek"], 0.6)                      # gevşek kemik ~%67
+        self.assertLess(abs(kemik["gercek"] - kemik["rastgele"]), 0.06)
+
 
 class KolonUretTest(unittest.TestCase):
     def kontrol_60(self, kolonlar):
@@ -57,6 +76,10 @@ class KolonUretTest(unittest.TestCase):
             self.assertEqual(sl.taklit_kontrol(k, h, son)[0], 0)      # taklidin zorunlu kuralları
             self.assertEqual(sl.kemik_ceza(k, set(son)), 0)            # kemik yapı
             self.assertEqual(sl.dizilim(k)["onlu"], h["onlu"])
+        out = io.StringIO()
+        with redirect_stdout(out):
+            sl.taklit_yazdir(sonuc, "Set 1", an)
+        self.assertNotIn("G/O/Z", out.getvalue())                     # sadeleştirilen hedefler
 
     def test_tohum_tekrarlanabilir(self):
         a = sl.taklit_uret(CEKILISLER, 7)["kolonlar"]
