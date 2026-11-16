@@ -1,10 +1,14 @@
 name: Süper Loto güncelleme
 
 # Süper Loto çekilişleri Salı, Perşembe ve Pazar akşamları yapılır.
-# Ertesi sabah (Pzt/Çar/Cuma 08:23 TR = 05:23 UTC) yeni sonuçları çeker.
+# Ertesi sabah (Pzt/Çar/Cuma 06:00 TR = 03:00 UTC) yeni sonuçları çeker.
+# GitHub zamanlanmış çalıştırmaları geciktirebilir ya da atlayabilir; 07:30 TR'deki
+# yedek çalıştırma sabah hatırlatmasından önce veriyi garantiler (yeni çekiliş
+# zaten alındıysa hiçbir şey değiştirmez).
 on:
   schedule:
-    - cron: "23 5 * * 1,3,5"
+    - cron: "0 3 * * 1,3,5"
+    - cron: "30 4 * * 1,3,5"
   workflow_dispatch: {}  # Actions sekmesinden elle çalıştırmak için
 
 permissions:
