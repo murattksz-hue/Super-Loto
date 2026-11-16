@@ -56,10 +56,11 @@ class DegerlendirmeTest(unittest.TestCase):
 
     def test_karne_birikir_ve_tekrarlamaz(self):
         with tempfile.TemporaryDirectory() as t:
-            eski = sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH
+            eski = sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.ANALIZ_KARNESI_PATH
             sl.KARNE_PATH = Path(t) / "karne.csv"
             sl.DEGERLENDIRME_PATH = Path(t) / "son.md"
             sl.KURAL_KARNESI_PATH = Path(t) / "kural.csv"
+            sl.ANALIZ_KARNESI_PATH = Path(t) / "analiz.csv"
             try:
                 with redirect_stdout(io.StringIO()):
                     sl.degerlendir_ve_kaydet(CEKILISLER, KUPON)
@@ -72,23 +73,42 @@ class DegerlendirmeTest(unittest.TestCase):
                 kural = sl.KURAL_KARNESI_PATH.read_text(encoding="utf-8").splitlines()
                 self.assertEqual(kural[0], "kural,sinir,gercek,rastgele,fark,cekilis")
                 self.assertIn("Kemik yapının tamamı", "".join(kural))
+                self.assertIn("Analiz karnesi", metin)
+                analiz = sl.ANALIZ_KARNESI_PATH.read_text(encoding="utf-8").splitlines()
+                self.assertEqual(analiz[0], "dagilim,bu_yil,bu_yil_yuzde,beklenen_yuzde,tum_yillar_yuzde,yil,cekilis,genel_p")
+                self.assertEqual(len(analiz), 8)
             finally:
-                sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH = eski
+                sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.ANALIZ_KARNESI_PATH = eski
 
     def test_karne_ilk_satiri_dogru_sayar(self):
         uygun = dict(CEKILISLER[-1], no=985, tarih="2026-11-15", toplar=[3, 14, 22, 38, 47, 59])
         with tempfile.TemporaryDirectory() as t:
-            eski = sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH
+            eski = sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.ANALIZ_KARNESI_PATH
             sl.KARNE_PATH = Path(t) / "karne.csv"
             sl.DEGERLENDIRME_PATH = Path(t) / "son.md"
             sl.KURAL_KARNESI_PATH = Path(t) / "kural.csv"
+            sl.ANALIZ_KARNESI_PATH = Path(t) / "analiz.csv"
             try:
                 with redirect_stdout(io.StringIO()):
                     sl.degerlendir_ve_kaydet(CEKILISLER + [uygun], "")
                 self.assertIn("Kemik yapıya uyan çekiliş: 1/1",
                               sl.DEGERLENDIRME_PATH.read_text(encoding="utf-8"))
             finally:
-                sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH = eski
+                sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.ANALIZ_KARNESI_PATH = eski
+
+
+class AnalizKarnesiTest(unittest.TestCase):
+    def test_alt_ust_dagilimi_2026(self):
+        a = sl.analiz_karnesi(CEKILISLER)
+        self.assertEqual([r["dagilim"] for r in a["satirlar"]],
+                         ["6–0", "5–1", "4–2", "3–3", "2–4", "1–5", "0–6"])
+        self.assertEqual(a["yil"], "2026")
+        self.assertEqual(a["cekilis"], 136)                  # 984'e kadar 2026 çekilişleri
+        iki_dort = a["satirlar"][4]
+        self.assertEqual(iki_dort["bu_yil"], 44)
+        self.assertAlmostEqual(iki_dort["beklenen"], 0.2378, places=3)
+        self.assertEqual(sum(r["bu_yil"] for r in a["satirlar"]), 136)
+        self.assertTrue(0 < a["genel_p"] < 1)
 
 
 if __name__ == "__main__":

@@ -128,6 +128,7 @@ Her çekilişten sonra script kendini sorgular ve `son_degerlendirme.md` dosyas�
 - **Kupon:** O çekiliş için üretilen 10 kolonun her biri kaç bildi. Sonuç rastgele 10 kolonun beklentisiyle karşılaştırılır.
 - **Karne:** Her değerlendirme `degerlendirme_karnesi.csv` dosyasına bir kez eklenir. Kemik yapıya uyan çekilişler, dikkat çekici durumlar ve kuponların 3+ bilme sayısı birikir.
 - **Kural karnesi:** Her kural tüm geçmiş çekilişlerle karşılaştırılır: gerçek çekilişlerin yüzde kaçı uyuyor, rastgele numaraların yüzde kaçı uyuyor. Bir kural işe yarasaydı iki oran belirgin farklı olurdu. Güç dengesi ve uzun süredir çıkmayanlar son 300 çekilişte, her biri kendinden önceki veriyle ölçülür.
+- **Analiz karnesi (kural değil):** Bu yılın çekilişlerinde bir çekilişte 1–30 ve 31–60 arasından kaçar numara geldiği; rastgele beklenen ve tüm yıllarla karşılaştırılır.
 - **Öneriler:** Kural karnesinden hemen, kendi kuponlarımızın sonuçlarından ise 30 kuponlu çekiliş birikince kanıta dayalı öneriler verir. Kurallar hiçbir zaman otomatik değişmez; kararı siz verirsiniz.
 
 Her çekiliş bağımsızdır. Değerlendirme geçmişi özetler, sonraki çekilişi tahmin etmez.
@@ -141,7 +142,8 @@ Her çekiliş bağımsızdır. Değerlendirme geçmişi özetler, sonraki çekil
 - `son_degerlendirme.md`: son çekilişin değerlendirmesi ve karne özeti
 - `degerlendirme_karnesi.csv`: her çekilişin değerlendirme satırı (biriken karne)
 - `kural_karnesi.csv`: her kuralın gerçek çekilişlerde ve rastgele numaralarda uyma oranı (`--kural-karnesi` ile de üretilir)
-- `pano_guncelle.sh`: `superloto.csv`, `oyun_kolonlari.txt` ve `kural_karnesi.csv` dosyalarının güncel halini pano için #12, #13 ve #17 numaralı issue'lara kopyalar. Bu issue'ları kapatmayın.
+- `analiz_karnesi.csv`: bu yılın çekilişlerinde 1–30 ve 31–60 arasından kaçar numara geldiği; kural değildir, yalnızca izlenir
+- `pano_guncelle.sh`: `superloto.csv`, `oyun_kolonlari.txt` `kural_karnesi.csv` ve `analiz_karnesi.csv` dosyalarının güncel halini pano için #12, #13, #17 ve #19 numaralı issue'lara kopyalar. Bu issue'ları kapatmayın.
 
 ## Testler
 
