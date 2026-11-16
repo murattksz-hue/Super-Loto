@@ -1418,8 +1418,7 @@ def main() -> None:
                         "'jupiter' çekiliş günü Jüpiter saatindeyse kolonları üretir")
     p.add_argument("--simdi", help="--oyun jupiter için zamanı belirle (YYYY-AA-GGTSS:DD), test için")
     p.add_argument("--hepsi", action="store_true",
-                   help="tüm kurallar: taklitçi + analizli kural (kemik yapı, güç dengesi, "
-                        "uzun süredir çıkmayanlar, birlikte çıkanlar) birlikte")
+                   help="tüm kurallar: taklitçi kural + kemik yapı + farklı düzen birlikte")
     p.add_argument("--taklit-oran", type=int, default=7,
                    help="--taklitci: 10 şablondan kaçının son 1 yıldan seçileceği (0-10, varsayılan 7)")
     p.add_argument("--tolerans", type=int, default=6,
