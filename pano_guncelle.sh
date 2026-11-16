@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Süper Loto panosu dosyaları GitHub bağlayıcısıyla doğrudan okuyamıyor
+# (dosya içeriği ayrı bir ek olarak dönüyor), bu yüzden iki dosyanın
+# güncel halini issue gövdesine kopyalar. GH_TOKEN gerekir.
+set -euo pipefail
+yaz() {  # dosya issue_no
+  govde=$(mktemp)
+  { echo "Bu issue Süper Loto panosu için otomatik güncellenir; kapatmayın, düzenlemeyin."
+    echo
+    cat "$1"; } > "$govde"
+  gh issue edit "$2" --body-file "$govde"
+  rm -f "$govde"
+}
+yaz superloto.csv 12
+yaz oyun_kolonlari.txt 13

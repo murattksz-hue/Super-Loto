@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  issues: write  # pano verisi (pano_guncelle.sh)
 
 concurrency:
   group: superloto
@@ -62,3 +63,6 @@ jobs:
           done
           git commit -m "Süper Loto sonuçlarını güncelle (son çekiliş: $son)"
           git push
+          ./pano_guncelle.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
