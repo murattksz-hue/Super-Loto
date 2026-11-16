@@ -118,12 +118,30 @@ Farklı düzen kuralı burada da geçerlidir: aynı çekiliş için verilen her 
 
 Geriye dönük testte taklitçi kolonlar rastgele kolonlarla şans payı içinde aynı sonucu verdi; taklit, kazanma ihtimalini değiştirmez.
 
+## Çekiliş sonrası değerlendirme (`--degerlendir`)
+
+```bash
+python3 superloto.py --analiz --degerlendir
+```
+
+Her çekilişten sonra script kendini sorgular ve `son_degerlendirme.md` dosyasını yazar:
+
+- **Bu çekiliş normal mi?** Toplam, tek/çift dengesi, ardışıklar, önceki çekilişten tekrarlar, aynı onluktaki numaralar ve uzun süredir çıkmayan numaralar tüm geçmişle karşılaştırılır. Geçmişte %5'ten seyrek görülen her durum "dikkat çekici" olarak yazılır.
+- **Kurallarımıza uyuyor muydu?** Çıkan numaralar kemik yapıya uymuyorsa tüm kurallar modu o dizilimde bir kolon üretemezdi. Bu bizim hatamız olarak not edilir.
+- **Kupon:** O çekiliş için üretilen 10 kolonun her biri kaç bildi. Sonuç rastgele 10 kolonun beklentisiyle karşılaştırılır.
+- **Karne:** Her değerlendirme `degerlendirme_karnesi.csv` dosyasına bir kez eklenir. Kemik yapıya uyan çekilişler, dikkat çekici durumlar ve kuponların 3+ bilme sayısı birikir.
+- **Öneriler:** En az 30 çekiliş birikince karne kanıta dayalı öneriler verir. Örneğin kemik yapı gerçek çekilişlere çok az uyuyorsa onu zorunlu olmaktan çıkarmayı önerir. Kurallar hiçbir zaman otomatik değişmez; kararı siz verirsiniz.
+
+Her çekiliş bağımsızdır. Değerlendirme geçmişi özetler, sonraki çekilişi tahmin etmez.
+
 ## Dosyalar
 
 - `superloto.py`: script
 - `superloto.csv`: 2 Ağustos 2020'den bu yana bütün Süper Loto çekilişleri (çekiliş no, tarih, 6 numara)
 - `superloto_rapor.txt`: en son analiz raporu ve yıllık özet
 - `oyun_kolonlari.txt`: sonraki çekiliş gününün Ankara gezegen saatleri ve çekiliş günü ilk Jüpiter saatinde tüm kurallarla (`--hepsi`) üretilen 10 kolon
+- `son_degerlendirme.md`: son çekilişin değerlendirmesi ve karne özeti
+- `degerlendirme_karnesi.csv`: her çekilişin değerlendirme satırı (biriken karne)
 
 ## Testler
 
@@ -132,9 +150,10 @@ python3 -m unittest discover -s tests -v
 ```
 
 - `tests/test_veri.py`: siteden çekilen verinin doğrulanması. Aynı numara iki kez, 1–60 dışında bir numara ya da geçersiz bir tarih gelirse script durur ve CSV'ye hiçbir şey yazmaz.
+- `tests/test_degerlendirme.py`: kuponun okunması, çekiliş değerlendirmesi ve karnenin birikmesi.
 - `tests/test_kurallar.py`: kolon kuralları (60 numara / 10 kolon, kemik yapı, farklı düzen, tüm kurallar), gezegen saatleri, Jüpiter saatinde üretim akışı ve bilinen analiz değerleri.
 - `.github/workflows/testler.yml` her PR'da ve `main`'e her gönderimde testleri çalıştırır.
 
 ## Otomatik güncelleme
 
-`.github/workflows/superloto.yml`, her Süper Loto çekilişinin ertesi sabahı (Pazartesi, Çarşamba, Cuma 08:23 TR) scripti çalıştırır. Yeni çekiliş varsa `superloto.csv` ve `superloto_rapor.txt` dosyalarını günceller ve sonraki çekiliş gününü `oyun_kolonlari.txt` dosyasına hazırlar. Kolonları çekiliş günü `.github/workflows/jupiter.yml` ilk Jüpiter saatinde üretir. Actions sekmesinden "Run workflow" ile elle de çalıştırılabilir.
+`.github/workflows/superloto.yml`, her Süper Loto çekilişinin ertesi sabahı (Pazartesi, Çarşamba, Cuma 08:23 TR) scripti çalıştırır. Yeni çekiliş varsa `superloto.csv` ve `superloto_rapor.txt` dosyalarını günceller, çekilişi kuponumuzla birlikte değerlendirip karneye ekler ve sonraki çekiliş gününü `oyun_kolonlari.txt` dosyasına hazırlar. Kolonları çekiliş günü `.github/workflows/jupiter.yml` ilk Jüpiter saatinde üretir. Actions sekmesinden "Run workflow" ile elle de çalıştırılabilir.
