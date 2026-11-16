@@ -62,7 +62,12 @@ def sayfa_getir(url: str, deneme: int = 4) -> str:
 
 
 def sayfayi_coz(html: str) -> list[dict]:
-    """Bir sayfadaki çekilişleri (no, tarih, 6 numara) döndürür."""
+    """Bir sayfadaki çekilişleri (no, tarih, 6 numara) döndürür.
+
+    Siteden gelen veri güvenilmez kabul edilir: aynı numara iki kez, 1–60
+    dışında bir numara ya da geçersiz bir tarih gelirse ValueError verilir
+    ve hiçbir şey kaydedilmez. Yanlış veri sessizce CSV'ye girmesin diye.
+    """
     parcalar = BASLIK_RE.split(html)
     cekilisler = []
     # split sonucu: [önce, no, gün, ay, yıl, içerik, no, gün, ...]
@@ -71,11 +76,13 @@ def sayfayi_coz(html: str) -> list[dict]:
         toplar = [int(x) for x in re.findall(r"b(\d+)\.gif", icerik)][:6]
         if len(toplar) != 6 or ay not in AYLAR:
             continue
-        cekilisler.append({
-            "no": int(no),
-            "tarih": f"{yil}-{AYLAR[ay]:02d}-{int(gun):02d}",
-            "toplar": sorted(toplar),
-        })
+        if len(set(toplar)) != 6 or not all(1 <= t <= 60 for t in toplar):
+            raise ValueError(f"{no} nolu çekilişte geçersiz numaralar: {toplar}")
+        try:
+            tarih = datetime.date(int(yil), AYLAR[ay], int(gun))
+        except ValueError as e:
+            raise ValueError(f"{no} nolu çekilişte geçersiz tarih: {gun} {ay} {yil}") from e
+        cekilisler.append({"no": int(no), "tarih": tarih.isoformat(), "toplar": sorted(toplar)})
     return cekilisler
 
 
@@ -943,6 +950,16 @@ def yakala(fonksiyon, *args, **kwargs) -> str:
     return tampon.getvalue()
 
 
+def kolonlar_uretildi_mi(gun: datetime.date) -> bool:
+    """Oyun dosyasında bu gün için kolonların üretildiğini gösteren satır var mı?"""
+    try:
+        metin = OYUN_PATH.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return any(satir.startswith(f"KOLONLAR: {gun.isoformat()} ") and "üretildi" in satir
+               for satir in metin.splitlines())
+
+
 def jupiter_saatleri(gun: datetime.date) -> list[dict]:
     """Satış kapanmadan önce başlayan Jüpiter saatleri (bitiş en geç kapanış)."""
     kapanis = datetime.datetime.combine(gun, SATIS_KAPANIS)
@@ -954,11 +971,7 @@ def oyun_planla(cekilisler: list[dict]) -> None:
     """Sonraki çekiliş günü için oyun dosyasını hazırlar: gezegen saatleri ve
     kolonların ilk Jüpiter saatinde üretileceği notu."""
     gun = sonraki_cekilis(cekilisler[-1]["tarih"])
-    try:
-        mevcut = OYUN_PATH.read_text(encoding="utf-8")
-    except OSError:
-        mevcut = ""
-    if f"KOLONLAR: {gun.isoformat()} " in mevcut and "üretildi" in mevcut:
+    if kolonlar_uretildi_mi(gun):
         print(f"{gun}: kolonlar Jüpiter saatinde zaten üretilmiş, dosyaya dokunulmadı.")
         return
     j = jupiter_saatleri(gun)
@@ -982,11 +995,7 @@ def oyun_jupiter(cekilisler: list[dict], simdi: datetime.datetime) -> None:
     if gun.weekday() not in CEKILIS_GUNLERI:
         print(f"{gun}: çekiliş günü değil.")
         return
-    try:
-        mevcut = OYUN_PATH.read_text(encoding="utf-8")
-    except OSError:
-        mevcut = ""
-    if f"KOLONLAR: {gun.isoformat()} " in mevcut and "üretildi" in mevcut:
+    if kolonlar_uretildi_mi(gun):
         print(f"{gun}: kolonlar zaten üretilmiş.")
         return
     kapanis = datetime.datetime.combine(gun, SATIS_KAPANIS)
@@ -1000,7 +1009,7 @@ def oyun_jupiter(cekilisler: list[dict], simdi: datetime.datetime) -> None:
         print(f"{gun}: Jüpiter saati bekleniyor ({sonraki['bas']:%H:%M}–{sonraki['bit']:%H:%M}).")
         return
     if simdiki is not None:
-        not_ = (f"Jüpiter saati {simdiki['bas']:%H:%M}–{simdiki['bit']:%H:%M} içinde, "
+        not_ = (f"Jüpiter saati {simdiki['bas']:%H:%M}–{simdiki['bit']:%H:%M} içinde üretildi, "
                 f"üretim saati {simdi:%H:%M}.")
         if jup and simdiki is not jup[0]:
             not_ += f" (İlk Jüpiter saati {jup[0]['bas']:%H:%M} kaçırıldı.)"
