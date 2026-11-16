@@ -62,7 +62,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add superloto.csv superloto_rapor.txt oyun_kolonlari.txt
-          for f in degerlendirme_karnesi.csv son_degerlendirme.md; do
+          for f in degerlendirme_karnesi.csv son_degerlendirme.md kural_karnesi.csv; do
             if [ -f "$f" ]; then git add "$f"; fi
           done
           git commit -m "Süper Loto sonuçlarını güncelle (son çekiliş: $son)"
