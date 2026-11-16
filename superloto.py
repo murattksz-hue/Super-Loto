@@ -11,6 +11,7 @@ Kullanım:
     python3 superloto.py --taklitci # geçmiş çekilişleri (son yıl ağırlıklı) taklit eden 10 kolon
     python3 superloto.py --hepsi    # tüm kurallar birlikte (oynarken önerilen)
     python3 superloto.py --gezegen  # sonraki çekiliş günü Ankara gezegen saatleri
+    python3 superloto.py --degerlendir  # son çekilişin değerlendirmesi ve karne
 
 Sonuçlar superloto.csv dosyasına kaydedilir; sonraki çalıştırmalarda sadece
 yeni çekilişler indirilir. Sadece Python standart kütüphanesi kullanılır.
@@ -28,6 +29,7 @@ import json
 import math
 import random
 import re
+import subprocess
 import sys
 import time
 import urllib.request
@@ -1028,6 +1030,226 @@ def oyun_jupiter(cekilisler: list[dict], simdi: datetime.datetime) -> None:
     print(f"{gun}: kolonlar üretildi — {not_}")
 
 
+# Her çekiliş sonrası değerlendirme ve karne.
+KARNE_PATH = Path(__file__).with_name("degerlendirme_karnesi.csv")
+DEGERLENDIRME_PATH = Path(__file__).with_name("son_degerlendirme.md")
+KARNE_ALANLARI = ["no", "tarih", "toplam", "tek", "ardisik", "tekrar", "kemik_uygun",
+                  "dikkat_sayisi", "kupon_var", "en_iyi", "uc_ve_ustu"]
+
+
+def kupon_coz(metin: str) -> tuple[str | None, list[list[int]]]:
+    """Oyun dosyasındaki kuponun tarihini ve kolonlarını okur
+    (kolonlar henüz üretilmediyse boş liste)."""
+    tarih = None
+    for satir in metin.splitlines():
+        m = re.match(r"KOLONLAR: (\d{4}-\d\d-\d\d) ", satir)
+        if m:
+            tarih = m.group(1)
+            break
+    kolonlar = []
+    for satir in metin.splitlines():
+        m = re.match(r"^\s*\d{1,2}\s+((?:\d{1,2}\s*-\s*){5}\d{1,2})\s", satir)
+        if m:
+            kolonlar.append(sorted(int(x) for x in m.group(1).split("-")))
+    return tarih, kolonlar
+
+
+def gecmis_kupon_metni(tarih: str, derinlik: int = 40) -> str:
+    """Oyun dosyası o çekilişin kuponunu artık içermiyorsa (sonraki gün
+    planlanmışsa) git geçmişindeki son halini arar."""
+    try:
+        metin = OYUN_PATH.read_text(encoding="utf-8")
+        if kupon_coz(metin)[0] == tarih:
+            return metin
+    except OSError:
+        pass
+    try:
+        shalar = subprocess.run(
+            ["git", "log", f"-{derinlik}", "--format=%H", "--", OYUN_PATH.name],
+            cwd=OYUN_PATH.parent, capture_output=True, text=True, check=True).stdout.split()
+        for sha in shalar:
+            metin = subprocess.run(["git", "show", f"{sha}:{OYUN_PATH.name}"], cwd=OYUN_PATH.parent,
+                                   capture_output=True, text=True, check=True).stdout
+            t, kolonlar = kupon_coz(metin)
+            if t == tarih and kolonlar:
+                return metin
+    except (OSError, subprocess.CalledProcessError):
+        pass
+    return ""
+
+
+def cekilis_degerlendir(cekilisler: list[dict], kupon_metni: str) -> dict:
+    """Son çekilişi geçmişin ışığında sorgular: normal mi, dikkat çekici bir
+    durum var mı, kuponumuz nasıl tuttu, kurallarımıza uyuyor muydu?"""
+    son, gecmis = cekilisler[-1], cekilisler[:-1]
+    onceki = gecmis[-1]["toplar"] if gecmis else []
+    d = dizilim(son["toplar"], onceki)
+    g = [dizilim(c["toplar"], gecmis[i - 1]["toplar"] if i else None) for i, c in enumerate(gecmis)]
+    n = len(g) or 1
+
+    def oran(kosul):
+        return sum(1 for x in g if kosul(x)) / n
+
+    dikkat = []
+    alt = oran(lambda x: x["toplam"] <= d["toplam"])
+    ust = oran(lambda x: x["toplam"] >= d["toplam"])
+    if min(alt, ust) < 0.025:
+        dikkat.append(f"toplam {d['toplam']}: bu kadar {'düşük' if alt < ust else 'yüksek'} "
+                      f"toplamın geçmişteki oranı %{100 * min(alt, ust):.1f}")
+    tek_oran = oran(lambda x: x["tek"] == d["tek"])
+    if tek_oran < 0.05:
+        dikkat.append(f"{d['tek']} tek / {6 - d['tek']} çift: geçmişte %{100 * tek_oran:.1f} sıklıkta")
+    ard_oran = oran(lambda x: x["ardisik"] >= d["ardisik"])
+    if d["ardisik"] and ard_oran < 0.05:
+        dikkat.append(f"{d['ardisik']} ardışık ikili: geçmişte %{100 * ard_oran:.1f} sıklıkta")
+    tkr_oran = oran(lambda x: x["tekrar"] >= d["tekrar"])
+    if d["tekrar"] and tkr_oran < 0.05:
+        dikkat.append(f"önceki çekilişten {d['tekrar']} numara tekrar etti: "
+                      f"geçmişte %{100 * tkr_oran:.1f} sıklıkta")
+    onlu_max = max(d["onlu"])
+    onlu_oran = oran(lambda x: max(x["onlu"]) >= onlu_max)
+    if onlu_oran < 0.05:
+        dikkat.append(f"aynı onluktan {onlu_max} numara: geçmişte %{100 * onlu_oran:.1f} sıklıkta")
+    son_gorulme = {}
+    for i, c in enumerate(gecmis):
+        for t in c["toplar"]:
+            son_gorulme[t] = i
+    gecikmeler = {t: len(gecmis) - 1 - son_gorulme.get(t, -1) for t in son["toplar"]}
+    for t, gk in sorted(gecikmeler.items()):
+        if gk >= 30:  # bir numaranın 30 çekiliş çıkmama ihtimali ~%4
+            dikkat.append(f"{t} numara {gk} çekiliş aradan sonra geldi")
+
+    kemik_uygun = kemik_ceza(son["toplar"], set(onceki)) == 0
+    kemik_oran = (sum(1 for i, c in enumerate(gecmis[1:], 1)
+                      if kemik_ceza(c["toplar"], set(gecmis[i - 1]["toplar"])) == 0) / max(1, n - 1))
+    benzer = sum(1 for x in g if (x["onlu"], x["tek"], x["ardisik"])
+                 == (d["onlu"], d["tek"], d["ardisik"]))
+
+    an = numara_analizi(gecmis) if len(gecmis) > 10 else None
+    seviye = Counter(an["seviye"][t] for t in son["toplar"]) if an else Counter()
+
+    kupon_tarih, kolonlar = kupon_coz(kupon_metni) if kupon_metni else (None, [])
+    kupon_var = kupon_tarih == son["tarih"] and bool(kolonlar)
+    cikan = set(son["toplar"])
+    bilen = [len(cikan & set(k)) for k in kolonlar] if kupon_var else []
+
+    r = [f"# Çekiliş değerlendirmesi: #{son['no']} ({son['tarih']})", "",
+         f"Çıkan numaralar: **{' - '.join(map(str, son['toplar']))}** "
+         f"(toplam {d['toplam']}, {d['tek']} tek / {6 - d['tek']} çift, "
+         f"{d['ardisik']} ardışık ikili, önceki çekilişten {d['tekrar']} tekrar)", "",
+         "## Bu çekiliş normal mi?", ""]
+    if dikkat:
+        r += [f"- Dikkat çekici: {x}" for x in dikkat]
+        r += ["", "Bu durumlar seyrek ama rastgele bir çekilişte de beklenir: her çekilişte "
+              "bakılan birkaç özellikten birinin %5'lik dilime düşmesi olağandır."]
+    else:
+        r.append("Dikkat çekici bir durum yok: toplam, tek/çift dengesi, ardışıklar, "
+                 "tekrarlar ve onluk dağılımı geçmişteki olağan aralıkta.")
+    r += ["", f"Aynı dizilimde (onluk dağılımı, tek sayısı, ardışıklar) geçmiş çekiliş sayısı: "
+          f"{benzer}."]
+    if an:
+        r.append(f"Güç dengesi: {seviye['G']} güçlü / {seviye['O']} orta / {seviye['Z']} zayıf numara.")
+    r += ["", "## Kurallarımıza uyuyor muydu?", ""]
+    if kemik_uygun:
+        r.append("Evet, kemik yapıya uyuyor. Tüm kurallar modu bu dizilimde bir kolon üretebilirdi.")
+    else:
+        r.append("Hayır, kemik yapının dışında. Tüm kurallar modu (kemik yapı zorunlu) bu dizilimde "
+                 "bir kolon üretemezdi. Bu bir \"hata\" değil, kuralın doğası: geçmiş çekilişlerde "
+                 f"kemik yapıya uyma oranı %{100 * kemik_oran:.0f}.")
+    r += ["", "## Kupon", ""]
+    if kupon_var:
+        dag = Counter(bilen)
+        r.append(f"10 kolondan en iyisi **{max(bilen)} bildi**. Dağılım: "
+                 + ", ".join(f"{k} bilen {dag[k]} kolon" for k in sorted(dag, reverse=True)) + ".")
+        if len(kolonlar) == 10 and sorted(t for k in kolonlar for t in k) == list(range(1, 61)):
+            r.append("60 numara / 10 kolon düzeninde çıkan 6 numaranın hepsi kuponda olur; "
+                     "kazanmak için birkaçının aynı kolonda toplanması gerekir ve bu tamamen şansa bağlıdır.")
+        r.append("Rastgele 10 kolonla beklenen: en az bir kolonda 3 bilme yaklaşık %10, 4 bilme %0,45.")
+    else:
+        r.append("Bu çekiliş için kayıtlı kupon bulunamadı.")
+    return {"no": son["no"], "tarih": son["tarih"], "toplam": d["toplam"], "tek": d["tek"],
+            "ardisik": d["ardisik"], "tekrar": d["tekrar"], "kemik_uygun": kemik_uygun,
+            "dikkat": dikkat, "kupon_var": kupon_var, "kupon_bilen": bilen,
+            "en_iyi": max(bilen) if bilen else None,
+            "uc_ve_ustu": sum(1 for b in bilen if b >= 3) if bilen else None,
+            "kemik_oran": kemik_oran, "rapor": "\n".join(r)}
+
+
+def karne_oku() -> list[dict]:
+    try:
+        with KARNE_PATH.open(encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+    except OSError:
+        return []
+
+
+def karne_ozeti(satirlar: list[dict], kemik_oran: float) -> str:
+    """Biriken değerlendirmelerden karne ve kanıta dayalı öneriler."""
+    n = len(satirlar)
+    r = ["", "## Karne", "", f"Değerlendirilen çekiliş: {n}"]
+    if not n:
+        return "\n".join(r)
+    satirlar = [{k: str(v) for k, v in s.items()} for s in satirlar]  # CSV'den okunanla aynı biçim
+    kemik = sum(s["kemik_uygun"] == "1" for s in satirlar)
+    dikkat = sum(int(s["dikkat_sayisi"]) > 0 for s in satirlar)
+    kuponlu = [s for s in satirlar if s["kupon_var"] == "1"]
+    r.append(f"- Kemik yapıya uyan çekiliş: {kemik}/{n} (geçmişin tamamında %{100 * kemik_oran:.0f})")
+    r.append(f"- Dikkat çekici durumu olan çekiliş: {dikkat}/{n}")
+    if kuponlu:
+        uc = sum(int(s["uc_ve_ustu"] or 0) > 0 for s in kuponlu)
+        en_iyi = Counter(int(s["en_iyi"]) for s in kuponlu)
+        r.append(f"- Kupon oynanan çekiliş: {len(kuponlu)}; en az bir kolonda 3+ bilen: "
+                 f"{uc} (rastgele beklenen ~{0.099 * len(kuponlu):.1f})")
+        r.append("- En iyi kolon dağılımı: "
+                 + ", ".join(f"{k} bilen {en_iyi[k]} kez" for k in sorted(en_iyi, reverse=True)))
+    r += ["", "## Öneriler", ""]
+    if n < 30:
+        r.append(f"Henüz {n} çekiliş değerlendirildi. Kurallarda değişiklik önermek için en az 30 "
+                 "çekiliş gerekiyor; daha azında görülen farklar şans eseri olabilir.")
+    else:
+        oneri = []
+        if kemik / n < 0.4:
+            oneri.append(f"Kemik yapı son {n} çekilişin yalnızca %{100 * kemik / n:.0f}'ine uydu. "
+                         "Tüm kurallar modunda kemik yapıyı zorunlu olmaktan çıkarıp hedef yapmayı "
+                         "düşünebilirsiniz; kolonlar gerçek dizilimlere daha çok benzer.")
+        if kuponlu:
+            beklenen = 0.099 * len(kuponlu)
+            uc = sum(int(s["uc_ve_ustu"] or 0) > 0 for s in kuponlu)
+            if uc < beklenen - 2 * (beklenen * 0.9) ** 0.5:
+                oneri.append("Kuponlarımız 3+ bilmede rastgele beklenenin belirgin şekilde altında "
+                             "kaldı; kuralları gözden geçirmek mantıklı olabilir.")
+        oneri.append("Kuponların sonucu rastgele beklentiyle uyumlu olduğu sürece hiçbir kural "
+                     "değişikliği kazanma ihtimalini değiştirmez; değişiklikler yalnızca düzen içindir.")
+        r += [f"- {x}" for x in oneri]
+    return "\n".join(r)
+
+
+def degerlendir_ve_kaydet(cekilisler: list[dict], kupon_metni: str | None = None) -> None:
+    """Son çekilişi değerlendirir; karneye bir satır ekler (bir kez) ve
+    son_degerlendirme.md dosyasını yazar."""
+    son = cekilisler[-1]
+    if kupon_metni is None:
+        kupon_metni = gecmis_kupon_metni(son["tarih"])
+    d = cekilis_degerlendir(cekilisler, kupon_metni)
+    satirlar = karne_oku()
+    if not any(s["no"] == str(son["no"]) for s in satirlar):
+        satirlar.append({"no": d["no"], "tarih": d["tarih"], "toplam": d["toplam"], "tek": d["tek"],
+                         "ardisik": d["ardisik"], "tekrar": d["tekrar"],
+                         "kemik_uygun": int(d["kemik_uygun"]), "dikkat_sayisi": len(d["dikkat"]),
+                         "kupon_var": int(d["kupon_var"]),
+                         "en_iyi": "" if d["en_iyi"] is None else d["en_iyi"],
+                         "uc_ve_ustu": "" if d["uc_ve_ustu"] is None else d["uc_ve_ustu"]})
+        with KARNE_PATH.open("w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=KARNE_ALANLARI)
+            w.writeheader()
+            w.writerows(satirlar)
+    metin = (d["rapor"] + "\n" + karne_ozeti(satirlar, d["kemik_oran"])
+             + "\n\nNot: Her çekiliş bağımsızdır; bu değerlendirme geçmişi özetler, "
+               "sonraki çekilişi tahmin etmez.\n")
+    DEGERLENDIRME_PATH.write_text(metin, encoding="utf-8")
+    print(metin)
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--analiz", action="store_true", help="indirmeden sadece analiz yap")
@@ -1043,6 +1265,9 @@ def main() -> None:
     p.add_argument("--gezegen", action="store_true",
                    help="sonraki çekiliş günü için Ankara gezegen saatleri ve şanslı saatler")
     p.add_argument("--tarih", help="--gezegen için tarih (YYYY-AA-GG); verilmezse sonraki çekiliş günü")
+    p.add_argument("--degerlendir", action="store_true",
+                   help="son çekilişi değerlendir: normal mi, kupon nasıl tuttu, kurallara uyuyor muydu; "
+                        "karneye ekle")
     p.add_argument("--oyun", choices=["planla", "jupiter"],
                    help="oyun_kolonlari.txt: 'planla' sonraki çekiliş gününü hazırlar, "
                         "'jupiter' çekiliş günü Jüpiter saatindeyse kolonları üretir")
@@ -1068,6 +1293,9 @@ def main() -> None:
     cekilisler = [veri[k] for k in sorted(veri)]
     if a.gezegen:
         gezegen_yazdir(sonraki_cekilis(cekilisler[-1]["tarih"]))
+        return
+    if a.degerlendir:
+        degerlendir_ve_kaydet(cekilisler)
         return
     if a.oyun == "planla":
         oyun_planla(cekilisler)

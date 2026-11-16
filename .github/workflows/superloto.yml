@@ -20,6 +20,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 50  # değerlendirilen çekilişin kuponunu git geçmişinde bulmak için
 
       - uses: actions/setup-python@v6
         with:
@@ -30,6 +32,15 @@ jobs:
           python3 superloto.py > superloto_rapor.txt
           echo >> superloto_rapor.txt
           python3 superloto.py --analiz --yillik >> superloto_rapor.txt
+
+      - name: Son çekilişi değerlendir (karne)
+        run: |
+          # Yalnızca yeni çekiliş geldiyse; kupon henüz oyun_kolonlari.txt içinde.
+          if git diff --quiet -- superloto.csv; then
+            echo "Yeni çekiliş yok, değerlendirme atlandı."
+          else
+            python3 superloto.py --analiz --degerlendir
+          fi
 
       - name: Sonraki çekiliş gününü hazırla (gezegen saatleri)
         run: |
@@ -46,5 +57,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add superloto.csv superloto_rapor.txt oyun_kolonlari.txt
+          for f in degerlendirme_karnesi.csv son_degerlendirme.md; do
+            if [ -f "$f" ]; then git add "$f"; fi
+          done
           git commit -m "Süper Loto sonuçlarını güncelle (son çekiliş: $son)"
           git push
