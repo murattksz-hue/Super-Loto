@@ -1031,6 +1031,7 @@ def oyun_jupiter(cekilisler: list[dict], simdi: datetime.datetime) -> None:
 # Her çekiliş sonrası değerlendirme ve karne.
 KARNE_PATH = Path(__file__).with_name("degerlendirme_karnesi.csv")
 DEGERLENDIRME_PATH = Path(__file__).with_name("son_degerlendirme.md")
+KURAL_KARNESI_PATH = Path(__file__).with_name("kural_karnesi.csv")
 KARNE_ALANLARI = ["no", "tarih", "toplam", "tek", "ardisik", "tekrar", "kemik_uygun",
                   "dikkat_sayisi", "kupon_var", "en_iyi", "uc_ve_ustu"]
 
@@ -1219,7 +1220,16 @@ def kural_karnesi(cekilisler: list[dict], ornek: int = 20000, analiz_son: int = 
         for ad, a in (("Güç dengesi 2/2/2", "denge"),
                       ("Uzun süredir çıkmayanlardan en fazla 1", "gecikme")):
             satirlar.append({"kural": ad, "n": n, "gercek": say[a][0] / n, "rastgele": say[a][1] / n})
+    k = KEMIK
+    sinir = {"Tek sayı adedi": f"{k['tek'][0]}–{k['tek'][1]}",
+             "1–30 arasından adet": f"{k['dusuk'][0]}–{k['dusuk'][1]}",
+             "Aynı onluk": f"en fazla {k['onlu']}", "Aynı son hane": f"en fazla {k['son_hane']}",
+             "Toplam": f"{k['toplam'][0]}–{k['toplam'][1]}", "Ardışık ikili": f"en fazla {k['ardisik']}",
+             "Son çekilişten tekrar": f"en fazla {k['tekrar']}", "Kemik yapının tamamı": "hepsi birlikte",
+             "Güç dengesi 2/2/2": "2 güçlü / 2 orta / 2 zayıf",
+             "Uzun süredir çıkmayanlardan en fazla 1": "en uzun çıkmayan 10'dan en fazla 1"}
     for x in satirlar:
+        x["sinir"] = sinir.get(x["kural"], "")
         # Rastgele orandan 3 standart hatadan fazla sapma "belirgin fark" sayılır.
         p = x["rastgele"]
         x["belirgin"] = abs(x["gercek"] - p) > 3 * (p * (1 - p) / x["n"]) ** 0.5 + 1e-9
@@ -1237,6 +1247,18 @@ def kural_karnesi_metni(satirlar: list[dict]) -> str:
         g, rs = (f"{100 * x[a]:.1f}".replace(".", ",") for a in ("gercek", "rastgele"))
         r.append(f"| {x['kural']} | %{g} | %{rs} | {fark} |")
     return "\n".join(r)
+
+
+def kural_karnesi_yaz(cekilisler: list[dict]) -> list[dict]:
+    """Kural karnesini hesaplar ve pano için kural_karnesi.csv dosyasına yazar."""
+    kurallar = kural_karnesi(cekilisler)
+    with KURAL_KARNESI_PATH.open("w", encoding="utf-8", newline="") as f:
+        w = csv.writer(f, lineterminator="\n")
+        w.writerow(["kural", "sinir", "gercek", "rastgele", "fark", "cekilis"])
+        for x in kurallar:
+            w.writerow([x["kural"], x["sinir"], f"{100 * x['gercek']:.1f}", f"{100 * x['rastgele']:.1f}",
+                        "belirgin" if x["belirgin"] else "yok", x["n"]])
+    return kurallar
 
 
 def karne_ozeti(satirlar: list[dict], kemik_oran: float,
@@ -1295,6 +1317,7 @@ def degerlendir_ve_kaydet(cekilisler: list[dict], kupon_metni: str | None = None
     if kupon_metni is None:
         kupon_metni = gecmis_kupon_metni(son["tarih"])
     d = cekilis_degerlendir(cekilisler, kupon_metni)
+    kurallar = kural_karnesi_yaz(cekilisler)
     satirlar = karne_oku()
     if not any(s["no"] == str(son["no"]) for s in satirlar):
         satirlar.append({"no": d["no"], "tarih": d["tarih"], "toplam": d["toplam"], "tek": d["tek"],
@@ -1307,7 +1330,7 @@ def degerlendir_ve_kaydet(cekilisler: list[dict], kupon_metni: str | None = None
             w = csv.DictWriter(f, fieldnames=KARNE_ALANLARI)
             w.writeheader()
             w.writerows(satirlar)
-    metin = (d["rapor"] + "\n" + karne_ozeti(satirlar, d["kemik_oran"], kural_karnesi(cekilisler))
+    metin = (d["rapor"] + "\n" + karne_ozeti(satirlar, d["kemik_oran"], kurallar)
              + "\n\nNot: Her çekiliş bağımsızdır; bu değerlendirme geçmişi özetler, "
                "sonraki çekilişi tahmin etmez.\n")
     DEGERLENDIRME_PATH.write_text(metin, encoding="utf-8")
@@ -1332,6 +1355,8 @@ def main() -> None:
     p.add_argument("--degerlendir", action="store_true",
                    help="son çekilişi değerlendir: normal mi, kupon nasıl tuttu, kurallara uyuyor muydu; "
                         "karneye ekle")
+    p.add_argument("--kural-karnesi", action="store_true",
+                   help="her kuralın gerçek ve rastgele uyma oranını hesapla, kural_karnesi.csv'ye yaz")
     p.add_argument("--oyun", choices=["planla", "jupiter"],
                    help="oyun_kolonlari.txt: 'planla' sonraki çekiliş gününü hazırlar, "
                         "'jupiter' çekiliş günü Jüpiter saatindeyse kolonları üretir")
@@ -1360,6 +1385,9 @@ def main() -> None:
         return
     if a.degerlendir:
         degerlendir_ve_kaydet(cekilisler)
+        return
+    if a.kural_karnesi:
+        print(kural_karnesi_metni(kural_karnesi_yaz(cekilisler)).strip())
         return
     if a.oyun == "planla":
         oyun_planla(cekilisler)

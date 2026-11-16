@@ -56,9 +56,10 @@ class DegerlendirmeTest(unittest.TestCase):
 
     def test_karne_birikir_ve_tekrarlamaz(self):
         with tempfile.TemporaryDirectory() as t:
-            eski = sl.KARNE_PATH, sl.DEGERLENDIRME_PATH
+            eski = sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH
             sl.KARNE_PATH = Path(t) / "karne.csv"
             sl.DEGERLENDIRME_PATH = Path(t) / "son.md"
+            sl.KURAL_KARNESI_PATH = Path(t) / "kural.csv"
             try:
                 with redirect_stdout(io.StringIO()):
                     sl.degerlendir_ve_kaydet(CEKILISLER, KUPON)
@@ -68,22 +69,26 @@ class DegerlendirmeTest(unittest.TestCase):
                 metin = sl.DEGERLENDIRME_PATH.read_text(encoding="utf-8")
                 self.assertIn("Karne", metin)
                 self.assertIn("Kural karnesi", metin)
+                kural = sl.KURAL_KARNESI_PATH.read_text(encoding="utf-8").splitlines()
+                self.assertEqual(kural[0], "kural,sinir,gercek,rastgele,fark,cekilis")
+                self.assertIn("Kemik yapının tamamı", "".join(kural))
             finally:
-                sl.KARNE_PATH, sl.DEGERLENDIRME_PATH = eski
+                sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH = eski
 
     def test_karne_ilk_satiri_dogru_sayar(self):
         uygun = dict(CEKILISLER[-1], no=985, tarih="2026-11-15", toplar=[3, 14, 22, 38, 47, 59])
         with tempfile.TemporaryDirectory() as t:
-            eski = sl.KARNE_PATH, sl.DEGERLENDIRME_PATH
+            eski = sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH
             sl.KARNE_PATH = Path(t) / "karne.csv"
             sl.DEGERLENDIRME_PATH = Path(t) / "son.md"
+            sl.KURAL_KARNESI_PATH = Path(t) / "kural.csv"
             try:
                 with redirect_stdout(io.StringIO()):
                     sl.degerlendir_ve_kaydet(CEKILISLER + [uygun], "")
                 self.assertIn("Kemik yapıya uyan çekiliş: 1/1",
                               sl.DEGERLENDIRME_PATH.read_text(encoding="utf-8"))
             finally:
-                sl.KARNE_PATH, sl.DEGERLENDIRME_PATH = eski
+                sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH = eski
 
 
 if __name__ == "__main__":

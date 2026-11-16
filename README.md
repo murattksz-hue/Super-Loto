@@ -140,7 +140,8 @@ Her çekiliş bağımsızdır. Değerlendirme geçmişi özetler, sonraki çekil
 - `oyun_kolonlari.txt`: sonraki çekiliş gününün Ankara gezegen saatleri ve çekiliş günü ilk Jüpiter saatinde tüm kurallarla (`--hepsi`) üretilen 10 kolon
 - `son_degerlendirme.md`: son çekilişin değerlendirmesi ve karne özeti
 - `degerlendirme_karnesi.csv`: her çekilişin değerlendirme satırı (biriken karne)
-- `pano_guncelle.sh`: `superloto.csv` ve `oyun_kolonlari.txt` dosyalarının güncel halini pano için #12 ve #13 numaralı issue'lara kopyalar. Bu issue'ları kapatmayın.
+- `kural_karnesi.csv`: her kuralın gerçek çekilişlerde ve rastgele numaralarda uyma oranı (`--kural-karnesi` ile de üretilir)
+- `pano_guncelle.sh`: `superloto.csv`, `oyun_kolonlari.txt` ve `kural_karnesi.csv` dosyalarının güncel halini pano için #12, #13 ve #17 numaralı issue'lara kopyalar. Bu issue'ları kapatmayın.
 
 ## Testler
 
