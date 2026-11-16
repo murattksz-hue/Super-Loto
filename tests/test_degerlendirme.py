@@ -40,7 +40,7 @@ class DegerlendirmeTest(unittest.TestCase):
         d = sl.cekilis_degerlendir(CEKILISLER, KUPON)
         self.assertEqual(d["no"], 984)
         self.assertEqual(d["toplam"], 205)
-        self.assertFalse(d["kemik_uygun"])               # 25, 27, 29: aynı onlukta 3 numara
+        self.assertTrue(d["kemik_uygun"])                # aynı onlukta 3 numaraya artık izin var
         self.assertEqual(d["kupon_bilen"], [1, 2, 3])     # 16 / 25,27 / 29,52,56
         self.assertEqual(d["en_iyi"], 3)
         self.assertIn("Kupon", d["rapor"])
@@ -65,7 +65,9 @@ class DegerlendirmeTest(unittest.TestCase):
                     sl.degerlendir_ve_kaydet(CEKILISLER, KUPON)   # aynı çekiliş ikinci kez yazılmaz
                 satirlar = sl.KARNE_PATH.read_text(encoding="utf-8").strip().splitlines()
                 self.assertEqual(len(satirlar), 2)                # başlık + 1 satır
-                self.assertIn("Karne", sl.DEGERLENDIRME_PATH.read_text(encoding="utf-8"))
+                metin = sl.DEGERLENDIRME_PATH.read_text(encoding="utf-8")
+                self.assertIn("Karne", metin)
+                self.assertIn("Kural karnesi", metin)
             finally:
                 sl.KARNE_PATH, sl.DEGERLENDIRME_PATH = eski
 

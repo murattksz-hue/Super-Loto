@@ -45,7 +45,7 @@ python3 superloto.py --taklitci --taklit-oran 5  # şablonların 5'i son yıldan
 
 - **Güç dengesi:** Her numaraya altı sıralamanın ortalamasından puan verilir: tüm zamanlar, son 1 yıl, son 4 ay, bu yıl, sonraki çekilişin haftanın günü ve takip listesi. Her kolonda 2 güçlü, 2 orta ve 2 zayıf numara olur.
 - **Uzun süredir çıkmayanlar:** En uzun süredir çıkmayan 10 numaradan her kolonda en fazla 1 olur.
-- **Kemik yapı:** 2–4 tek sayı, 1–30 arasından 2–4 sayı, aynı onluda ve aynı son haneden en fazla 2 sayı, toplam 150–215, en fazla 1 ardışık ikili, son çekilişten en fazla 2 numara.
+- **Kemik yapı:** 1–5 tek sayı, 1–30 arasından 1–5 sayı, aynı onluda en fazla 3, aynı son haneden en fazla 2 sayı, toplam 130–235, en fazla 2 ardışık ikili, son çekilişten en fazla 2 numara. Gerçek çekilişlerin yaklaşık %67'si bu yapıya uyar.
 - **Birlikte çıkanlar:** Kurallar bozulmadan, geçmişte birlikte çok çıkan numaralar aynı kolona toplanır.
 - **Farklı düzen:** Script, aynı çekiliş için verdiği kolonları `kolon_gecmisi.json` dosyasında hatırlar. Yeni istenen her set, daha önce verilen kolonların her biriyle en fazla 2 numara paylaşır. Bir sonraki çekilişe geçildiğinde bu hafıza kendiliğinden sıfırlanır. `--tohum` verilirse hafıza kullanılmaz.
 
@@ -58,13 +58,10 @@ Analizli kural (`--kolon`) ile taklitçi kural (`--taklitci`) birlikte uygulanı
 - Her kolon, **kemik yapıya uyan** gerçek bir geçmiş çekilişi taklit eder. Şablon seçimi taklitçi kuraldaki gibidir (7 son yıl + 3 eski yıl, aynı gün ve aynı ay öncelikli, setler arasında tekrarsız).
 - **Zorunlu (her kolonda kesin):**
   - Taklit: onluk dağılımı, tek sayı, ardışık ikili ve aynı son hane adedi birebir; toplam ±6.
-  - Kemik yapı: 2–4 tek, 1–30 arasından 2–4, aynı onluda ve aynı son haneden en fazla 2, toplam 150–215, en fazla 1 ardışık ikili, son çekilişten en fazla 2 numara.
+  - Kemik yapı: 1–5 tek, 1–30 arasından 1–5, aynı onluda en fazla 3, aynı son haneden en fazla 2, toplam 130–235, en fazla 2 ardışık ikili, son çekilişten en fazla 2 numara.
   - Farklı düzen: önceki kolonların her biriyle en fazla 2 ortak numara.
-- **Hedef (olabildiğince yakın, "Uyum" sütunu, kolon başına 7 hedef):**
-  - Taklit hedefleri: asal, son çekilişten tekrar, ilk ve son top, aralık deseni.
-  - Güç dengesi: 2 güçlü, 2 orta, 2 zayıf (G/O/Z sütunu).
-  - Uzun süredir çıkmayanlardan en fazla 1.
-  - Birlikte çok çıkan numaralar aynı kolona toplanır (Ikl sütunu).
+- **Hedef (olabildiğince yakın, "Uyum" sütunu, kolon başına 5 hedef):** asal, son çekilişten tekrar, ilk ve son top, aralık deseni.
+- Güç dengesi, uzun süredir çıkmayanlar ve birlikte çıkanlar bu modda kullanılmaz. Geçmiş karşılaştırmasında gerçek çekilişlerde rastgele numaralardan farksız çıktılar (bkz. kural karnesi).
 - 60 numaranın hepsi tam bir kez kullanılır.
 
 Bütün kurallar aynı anda genelde sağlanamaz. Bu yüzden önce zorunlu kurallar kesin olarak sağlanır, sonra hedefler bu kurallar bozulmadan olabildiğince iyileştirilir. Çekiliş günleri kolonlar bu modla, günün ilk Jüpiter saatinde otomatik üretilip `oyun_kolonlari.txt` dosyasına yazılır.
@@ -130,7 +127,8 @@ Her çekilişten sonra script kendini sorgular ve `son_degerlendirme.md` dosyas�
 - **Kurallarımıza uyuyor muydu?** Çıkan numaralar kemik yapıya uymuyorsa tüm kurallar modu o dizilimde bir kolon üretemezdi. Bu bizim hatamız olarak not edilir.
 - **Kupon:** O çekiliş için üretilen 10 kolonun her biri kaç bildi. Sonuç rastgele 10 kolonun beklentisiyle karşılaştırılır.
 - **Karne:** Her değerlendirme `degerlendirme_karnesi.csv` dosyasına bir kez eklenir. Kemik yapıya uyan çekilişler, dikkat çekici durumlar ve kuponların 3+ bilme sayısı birikir.
-- **Öneriler:** En az 30 çekiliş birikince karne kanıta dayalı öneriler verir. Örneğin kemik yapı gerçek çekilişlere çok az uyuyorsa onu zorunlu olmaktan çıkarmayı önerir. Kurallar hiçbir zaman otomatik değişmez; kararı siz verirsiniz.
+- **Kural karnesi:** Her kural tüm geçmiş çekilişlerle karşılaştırılır: gerçek çekilişlerin yüzde kaçı uyuyor, rastgele numaraların yüzde kaçı uyuyor. Bir kural işe yarasaydı iki oran belirgin farklı olurdu. Güç dengesi ve uzun süredir çıkmayanlar son 300 çekilişte, her biri kendinden önceki veriyle ölçülür.
+- **Öneriler:** Kural karnesinden hemen, kendi kuponlarımızın sonuçlarından ise 30 kuponlu çekiliş birikince kanıta dayalı öneriler verir. Kurallar hiçbir zaman otomatik değişmez; kararı siz verirsiniz.
 
 Her çekiliş bağımsızdır. Değerlendirme geçmişi özetler, sonraki çekilişi tahmin etmez.
 

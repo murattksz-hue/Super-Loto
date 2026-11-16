@@ -365,22 +365,35 @@ def numara_analizi(cekilisler: list[dict]) -> dict:
             "sonraki_gun": GUNLER[sonraki_gun], "sonraki_tarih": sonraki.isoformat()}
 
 
-def kemik_ceza(kolon: list[int], son_cekilis: set[int]) -> int:
-    """Kemik yapıdan sapma (0 = uyuyor): 2–4 tek sayı, 1–30 arasından 2–4 sayı,
-    aynı onluda en fazla 2, aynı son haneden en fazla 2, toplam 150–215,
-    en fazla 1 ardışık ikili, son çekilişten en fazla 2 numara."""
+# Kemik yapı sınırları. Geçmiş karşılaştırmasında (985 çekiliş) eski sınırlar
+# gerçek çekilişlerin yalnızca %30'una uyuyordu; bunlar ~%67'sine uyar.
+KEMIK = {"tek": (1, 5), "dusuk": (1, 5), "onlu": 3, "son_hane": 2,
+         "toplam": (130, 235), "ardisik": 2, "tekrar": 2}
+KEMIK_METNI = ("1–5 tek, 1–30 arasından 1–5, aynı onluda en fazla 3, aynı son haneden en fazla 2, "
+               "toplam 130–235, en fazla 2 ardışık ikili, son çekilişten en fazla 2 numara")
+
+
+def kemik_olcu(kolon: list[int], son_cekilis: set[int]) -> dict:
     k = sorted(kolon)
-    tek = sum(t % 2 for t in k)
-    dusuk = sum(t <= 30 for t in k)
-    onlu = max(Counter((t - 1) // 10 for t in k).values())
-    son_hane = max(Counter(t % 10 for t in k).values())
-    toplam = sum(k)
-    ardisik = sum(1 for a, b in zip(k, k[1:]) if b - a == 1)
-    tekrar = len(son_cekilis & set(k))
-    return (max(0, 2 - tek, tek - 4) + max(0, 2 - dusuk, dusuk - 4)
-            + max(0, onlu - 2) + max(0, son_hane - 2)
-            + (max(0, 150 - toplam, toplam - 215) + 4) // 5
-            + max(0, ardisik - 1) + max(0, tekrar - 2))
+    return {"tek": sum(t % 2 for t in k), "dusuk": sum(t <= 30 for t in k),
+            "onlu": max(Counter((t - 1) // 10 for t in k).values()),
+            "son_hane": max(Counter(t % 10 for t in k).values()), "toplam": sum(k),
+            "ardisik": sum(1 for a, b in zip(k, k[1:]) if b - a == 1),
+            "tekrar": len(son_cekilis & set(k))}
+
+
+def kemik_ceza(kolon: list[int], son_cekilis: set[int]) -> int:
+    """Kemik yapıdan sapma (0 = uyuyor); sınırlar KEMIK sözlüğünde."""
+    o = kemik_olcu(kolon, son_cekilis)
+    ceza = 0
+    for ad in ("tek", "dusuk"):
+        alt, ust = KEMIK[ad]
+        ceza += max(0, alt - o[ad], o[ad] - ust)
+    alt, ust = KEMIK["toplam"]
+    ceza += (max(0, alt - o["toplam"], o["toplam"] - ust) + 4) // 5
+    for ad in ("onlu", "son_hane", "ardisik", "tekrar"):
+        ceza += max(0, o[ad] - KEMIK[ad])
+    return ceza
 
 
 def dagilim_ceza(kolon: list[int], an: dict) -> int:
@@ -507,8 +520,7 @@ def kolon_aciklama(an: dict) -> None:
     print(f"  - Güç puanı: {', '.join(an['olcutler'])} sıralamalarının ortalaması.")
     print("    Her kolonda 2 güçlü, 2 orta, 2 zayıf numara var.")
     print("  - Uzun süredir çıkmayanlar kolonlara dağıtıldı (her kolonda en fazla 1).")
-    print("  - Kemik yapı: 2–4 tek, 1–30 arasından 2–4, aynı onluda ve aynı son haneden")
-    print("    en fazla 2, toplam 150–215, en fazla 1 ardışık ikili, son çekilişten en fazla 2.")
+    print(f"  - Kemik yapı: {KEMIK_METNI}.")
     print("  - Birlikte çıkanlar: kurallar bozulmadan, geçmişte birlikte çok çıkan")
     print("    numaralar aynı kolona toplandı (İkili puanı = bu birlikteliklerin toplamı).")
     print("  - Farklı düzen: aynı çekiliş için verilen her yeni kolon, daha önce verilen")
@@ -681,10 +693,9 @@ def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
 
     `an` (numara_analizi sonucu) verilirse "tüm kurallar" modu çalışır:
     şablonlar yalnızca kemik yapıya uyan çekilişlerden seçilir ve kemik yapı
-    zorunlu olur. Güç dengesi (2 güçlü/2 orta/2 zayıf), uzun süredir
-    çıkmayanlardan en fazla 1 ve birlikte çok çıkanların aynı kolona
-    toplanması (ikili puanı) hedeflere eklenir. Hepsi aynı anda genelde
-    sağlanamadığı için bunlar zorunlu değil, olabildiğince yakın tutulur.
+    zorunlu olur. Güç dengesi, uzun süredir çıkmayanlar ve ikili puanı bu
+    modda kullanılmaz: geçmiş karşılaştırmasında gerçek çekilişlerde rastgele
+    numaralardan farksız çıktılar.
     """
     rng = random.Random(tohum)
     son = cekilisler[-1]
@@ -711,11 +722,7 @@ def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
 
         def hedef(i, kolon):
             _, h, _ = taklit_kontrol(kolon, hedefler[i], son["toplar"], tolerans)
-            if an is None:
-                return h
-            # Güç dengesi ve uzun süredir çıkmayanlar taklit hedeflerinden daha
-            # önemli tutulur; ikili puanı arttıkça ceza biraz azalır.
-            return h + 10 * dagilim_ceza(kolon, an) - ikili_puani(kolon, an) / 200
+            return h
 
         def takas_dene(kolonlar):
             a, b = rng.sample(range(10), 2)
@@ -797,34 +804,25 @@ def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
 def taklit_yazdir(sonuc: dict, baslik: str, an: dict | None = None) -> None:
     print(baslik)
     print(f"  Şablon seçimi: {sonuc['seviye']}.")
-    ek = f"{'G/O/Z':>7}{'Ikl':>5}" if an else ""
-    print(f"  {'#':>2}  {'Kolon':<29}{'Tek':>4}{'Asal':>5}{'Tkr':>4}{'Top':>5}{ek}{'Uyum':>6}   "
+    print(f"  {'#':>2}  {'Kolon':<29}{'Tek':>4}{'Asal':>5}{'Tkr':>4}{'Top':>5}{'Uyum':>6}   "
           f"Taklit edilen çekiliş")
     toplam_tutan = 0
-    hedef_sayisi = 7 if an else 5
+    hedef_sayisi = 5
     for i, (k, s, h) in enumerate(zip(sonuc["kolonlar"], sonuc["sablonlar"],
                                       sonuc["hedefler"]), 1):
         d = dizilim(k, sonuc["son_toplar"])
         z, _, tutan = taklit_kontrol(k, h, sonuc["son_toplar"], sonuc["tolerans"])
         assert z == 0, "zorunlu kurallar sağlanmalı"
-        sutun = ""
         if an:
             assert kemik_ceza(k, an["son"]) == 0, "kemik yapı sağlanmalı"
-            sev = Counter(an["seviye"][t] for t in k)
-            tutan += sum(abs(sev[x] - 2) for x in "GOZ") == 0
-            tutan += len(an["gecikme"] & set(k)) <= 1
-            karisim = f"{sev['G']}/{sev['O']}/{sev['Z']}"
-            sutun = f"{karisim:>7}{ikili_puani(k, an):>5}"
         toplam_tutan += tutan
         tarih = datetime.date.fromisoformat(s["tarih"])
         sablon = " - ".join(f"{t:2d}" for t in s["toplar"])
         print(f"  {i:>2}  {' - '.join(f'{t:2d}' for t in k):<29}"
-              f"{d['tek']:>4}{d['asal']:>5}{d['tekrar']:>4}{d['toplam']:>5}{sutun}"
+              f"{d['tek']:>4}{d['asal']:>5}{d['tekrar']:>4}{d['toplam']:>5}"
               f"{f'{tutan}/{hedef_sayisi}':>6}   "
               f"#{s['no']} {s['tarih']} {GUNLER[tarih.weekday()][:3]}: {sablon}")
     ad = "asal, son çekilişten tekrar, ilk top, son top, aralık deseni"
-    if an:
-        ad += ", güç dengesi 2/2/2, uzun süredir çıkmayanlardan en fazla 1"
     print(f"  Hedef uyumu: {toplam_tutan}/{10 * hedef_sayisi} ({ad})")
     kullanilan = sorted(t for k in sonuc["kolonlar"] for t in k)
     assert kullanilan == list(SAYI_ARALIGI), "her numara tam bir kez kullanılmalı"
@@ -837,13 +835,13 @@ def hepsi_aciklama(son_yil_adet: int, tolerans: int) -> None:
           "önceki yıllardan; aynı gün, eski yıllar için aynı ay öncelikli.")
     print("  - Zorunlu (her kolonda kesin):")
     print(f"    taklit: onluk dağılımı, tek, ardışık ikili, aynı son hane birebir; toplam ±{tolerans}")
-    print("    kemik yapı: 2–4 tek, 1–30 arasından 2–4, aynı onluda ve aynı son haneden en fazla 2,")
-    print("    toplam 150–215, en fazla 1 ardışık ikili, son çekilişten en fazla 2 numara")
+    print(f"    kemik yapı: {KEMIK_METNI[:KEMIK_METNI.index(', toplam')]},")
+    print(f"    {KEMIK_METNI[KEMIK_METNI.index('toplam'):]}")
     print("    farklı düzen: önceki kolonların her biriyle en fazla 2 ortak numara")
     print("  - Hedef (olabildiğince yakın, Uyum sütununda): asal adedi, son çekilişten tekrar,")
-    print("    ilk ve son top ±3, aralık deseni ±2, güç dengesi 2 güçlü/2 orta/2 zayıf (G/O/Z),")
-    print("    uzun süredir çıkmayanlardan en fazla 1; ayrıca birlikte çok çıkanlar aynı kolona")
-    print("    toplanır (Ikl = ikili puanı).")
+    print("    ilk ve son top ±3, aralık deseni ±2.")
+    print("  - Güç dengesi, uzun süredir çıkmayanlar ve birlikte çıkanlar kullanılmaz: geçmiş")
+    print("    karşılaştırmasında gerçek çekilişlerde rastgele numaralardan farksız çıktılar.")
     print("  - 60 numaranın hepsi tam bir kez kullanılır. Her yeni çekilişle kendini günceller.")
     print("  Not: Kurallar kazanma ihtimalini değiştirmez; seçimi düzenli hale getirir.")
 
@@ -1183,7 +1181,66 @@ def karne_oku() -> list[dict]:
         return []
 
 
-def karne_ozeti(satirlar: list[dict], kemik_oran: float) -> str:
+def kural_karnesi(cekilisler: list[dict], ornek: int = 20000, analiz_son: int = 300) -> list[dict]:
+    """Her kuralın gerçek çekilişlere uyma oranını, rastgele numaralarınkiyle
+    karşılaştırır. Bir kural işe yarasaydı gerçek oran rastgeleden belirgin
+    biçimde farklı olurdu. Rastgele örnek sabit tohumla üretilir."""
+    rng = random.Random(0)
+    kurallar = [
+        ("Tek sayı adedi", lambda o: KEMIK["tek"][0] <= o["tek"] <= KEMIK["tek"][1]),
+        ("1–30 arasından adet", lambda o: KEMIK["dusuk"][0] <= o["dusuk"] <= KEMIK["dusuk"][1]),
+        ("Aynı onluk", lambda o: o["onlu"] <= KEMIK["onlu"]),
+        ("Aynı son hane", lambda o: o["son_hane"] <= KEMIK["son_hane"]),
+        ("Toplam", lambda o: KEMIK["toplam"][0] <= o["toplam"] <= KEMIK["toplam"][1]),
+        ("Ardışık ikili", lambda o: o["ardisik"] <= KEMIK["ardisik"]),
+        ("Son çekilişten tekrar", lambda o: o["tekrar"] <= KEMIK["tekrar"]),
+    ]
+    gercek = [kemik_olcu(c["toplar"], set(cekilisler[i - 1]["toplar"]))
+              for i, c in enumerate(cekilisler) if i]
+    rastgele = [kemik_olcu(rng.sample(SAYI_ARALIGI, 6),
+                           set(cekilisler[rng.randrange(1, len(cekilisler))]["toplar"]))
+                for _ in range(ornek)]
+    satirlar = []
+    for ad, f in kurallar + [("Kemik yapının tamamı", lambda o: all(g(o) for _, g in kurallar))]:
+        satirlar.append({"kural": ad, "n": len(gercek),
+                         "gercek": sum(map(f, gercek)) / len(gercek),
+                         "rastgele": sum(map(f, rastgele)) / ornek})
+    # Analize dayalı kurallar: her çekiliş, kendinden önceki veriyle.
+    say = {"denge": [0, 0], "gecikme": [0, 0]}
+    n = 0
+    for i in range(max(11, len(cekilisler) - analiz_son), len(cekilisler)):
+        an = numara_analizi(cekilisler[:i])
+        for j, k in enumerate((cekilisler[i]["toplar"], rng.sample(SAYI_ARALIGI, 6))):
+            sev = Counter(an["seviye"][t] for t in k)
+            say["denge"][j] += all(sev[x] == 2 for x in "GOZ")
+            say["gecikme"][j] += len(an["gecikme"] & set(k)) <= 1
+        n += 1
+    if n:
+        for ad, a in (("Güç dengesi 2/2/2", "denge"),
+                      ("Uzun süredir çıkmayanlardan en fazla 1", "gecikme")):
+            satirlar.append({"kural": ad, "n": n, "gercek": say[a][0] / n, "rastgele": say[a][1] / n})
+    for x in satirlar:
+        # Rastgele orandan 3 standart hatadan fazla sapma "belirgin fark" sayılır.
+        p = x["rastgele"]
+        x["belirgin"] = abs(x["gercek"] - p) > 3 * (p * (1 - p) / x["n"]) ** 0.5 + 1e-9
+    return satirlar
+
+
+def kural_karnesi_metni(satirlar: list[dict]) -> str:
+    r = ["", "## Kural karnesi", "",
+         "Her kural tüm geçmiş çekilişlerle karşılaştırılır (güç dengesi ve gecikme son "
+         f"{satirlar[-1]['n']} çekilişte, her biri kendinden önceki veriyle).", "",
+         "| Kural | Gerçek çekilişlerde uyan | Rastgele numaralarda uyan | Fark |",
+         "|---|---|---|---|"]
+    for x in satirlar:
+        fark = "belirgin" if x["belirgin"] else "yok"
+        g, rs = (f"{100 * x[a]:.1f}".replace(".", ",") for a in ("gercek", "rastgele"))
+        r.append(f"| {x['kural']} | %{g} | %{rs} | {fark} |")
+    return "\n".join(r)
+
+
+def karne_ozeti(satirlar: list[dict], kemik_oran: float,
+                kurallar: list[dict] | None = None) -> str:
     """Biriken değerlendirmelerden karne ve kanıta dayalı öneriler."""
     n = len(satirlar)
     r = ["", "## Karne", "", f"Değerlendirilen çekiliş: {n}"]
@@ -1202,25 +1259,32 @@ def karne_ozeti(satirlar: list[dict], kemik_oran: float) -> str:
                  f"{uc} (rastgele beklenen ~{0.099 * len(kuponlu):.1f})")
         r.append("- En iyi kolon dağılımı: "
                  + ", ".join(f"{k} bilen {en_iyi[k]} kez" for k in sorted(en_iyi, reverse=True)))
+    if kurallar:
+        r.append(kural_karnesi_metni(kurallar))
     r += ["", "## Öneriler", ""]
-    if n < 30:
-        r.append(f"Henüz {n} çekiliş değerlendirildi. Kurallarda değişiklik önermek için en az 30 "
-                 "çekiliş gerekiyor; daha azında görülen farklar şans eseri olabilir.")
-    else:
-        oneri = []
-        if kemik / n < 0.4:
-            oneri.append(f"Kemik yapı son {n} çekilişin yalnızca %{100 * kemik / n:.0f}'ine uydu. "
-                         "Tüm kurallar modunda kemik yapıyı zorunlu olmaktan çıkarıp hedef yapmayı "
-                         "düşünebilirsiniz; kolonlar gerçek dizilimlere daha çok benzer.")
-        if kuponlu:
-            beklenen = 0.099 * len(kuponlu)
-            uc = sum(int(s["uc_ve_ustu"] or 0) > 0 for s in kuponlu)
-            if uc < beklenen - 2 * (beklenen * 0.9) ** 0.5:
-                oneri.append("Kuponlarımız 3+ bilmede rastgele beklenenin belirgin şekilde altında "
-                             "kaldı; kuralları gözden geçirmek mantıklı olabilir.")
-        oneri.append("Kuponların sonucu rastgele beklentiyle uyumlu olduğu sürece hiçbir kural "
-                     "değişikliği kazanma ihtimalini değiştirmez; değişiklikler yalnızca düzen içindir.")
-        r += [f"- {x}" for x in oneri]
+    oneri = []
+    if kurallar:
+        belirgin = [x["kural"] for x in kurallar if x["belirgin"]]
+        if belirgin:
+            oneri.append("Gerçek çekilişlerde rastgeleden belirgin farklı davranan kural: "
+                         + ", ".join(belirgin) + ". Bu kurala daha yakından bakmaya değer.")
+        else:
+            oneri.append("Hiçbir kural gerçek çekilişlerde rastgele numaralardan belirgin farklı "
+                         "davranmıyor. Kurallar kazanma ihtimalini değiştirmez, yalnızca düzen sağlar.")
+        tamami = next(x for x in kurallar if x["kural"] == "Kemik yapının tamamı")
+        if tamami["gercek"] < 0.5:
+            oneri.append(f"Kemik yapı gerçek çekilişlerin yalnızca %{100 * tamami['gercek']:.0f}'ine "
+                         "uyuyor; kolonlar gerçek dizilimlere benzesin isteniyorsa sınırlar gevşetilebilir.")
+    if len(kuponlu) >= 30:
+        beklenen = 0.099 * len(kuponlu)
+        uc = sum(int(s["uc_ve_ustu"] or 0) > 0 for s in kuponlu)
+        if uc < beklenen - 2 * (beklenen * 0.9) ** 0.5:
+            oneri.append("Kuponlarımız 3+ bilmede rastgele beklenenin belirgin şekilde altında "
+                         "kaldı; kuralları gözden geçirmek mantıklı olabilir.")
+    elif kuponlu:
+        oneri.append(f"Kendi kuponlarımızın sonucu için {len(kuponlu)} çekiliş var; rastgele "
+                     "beklentiyle anlamlı karşılaştırma için en az 30 kuponlu çekiliş gerekiyor.")
+    r += [f"- {x}" for x in oneri] or ["Henüz öneri yok."]
     return "\n".join(r)
 
 
@@ -1243,7 +1307,7 @@ def degerlendir_ve_kaydet(cekilisler: list[dict], kupon_metni: str | None = None
             w = csv.DictWriter(f, fieldnames=KARNE_ALANLARI)
             w.writeheader()
             w.writerows(satirlar)
-    metin = (d["rapor"] + "\n" + karne_ozeti(satirlar, d["kemik_oran"])
+    metin = (d["rapor"] + "\n" + karne_ozeti(satirlar, d["kemik_oran"], kural_karnesi(cekilisler))
              + "\n\nNot: Her çekiliş bağımsızdır; bu değerlendirme geçmişi özetler, "
                "sonraki çekilişi tahmin etmez.\n")
     DEGERLENDIRME_PATH.write_text(metin, encoding="utf-8")
