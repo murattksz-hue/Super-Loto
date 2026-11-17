@@ -56,15 +56,14 @@ class DegerlendirmeTest(unittest.TestCase):
 
     def test_karne_birikir_ve_tekrarlamaz(self):
         with tempfile.TemporaryDirectory() as t:
-            eski = (sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.ANALIZ_KARNESI_PATH,
-                    sl.ARDISIK_KARNESI_PATH, sl.IKILI_KARNESI_PATH, sl.DONGU_KARNESI_PATH)
+            eski = (sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.PENCERE_ANALIZI_PATH,
+                    sl.PENCERE_LISTELERI_PATH, sl.DONGU_KARNESI_PATH)
             sl.DONGU_KARNESI_PATH = Path(t) / "dongu.csv"
-            sl.ARDISIK_KARNESI_PATH = Path(t) / "ardisik.csv"
-            sl.IKILI_KARNESI_PATH = Path(t) / "ikili.csv"
+            sl.PENCERE_LISTELERI_PATH = Path(t) / "listeler.csv"
             sl.KARNE_PATH = Path(t) / "karne.csv"
             sl.DEGERLENDIRME_PATH = Path(t) / "son.md"
             sl.KURAL_KARNESI_PATH = Path(t) / "kural.csv"
-            sl.ANALIZ_KARNESI_PATH = Path(t) / "analiz.csv"
+            sl.PENCERE_ANALIZI_PATH = Path(t) / "pencere.csv"
             try:
                 with redirect_stdout(io.StringIO()):
                     sl.degerlendir_ve_kaydet(CEKILISLER, KUPON)
@@ -77,77 +76,78 @@ class DegerlendirmeTest(unittest.TestCase):
                 kural = sl.KURAL_KARNESI_PATH.read_text(encoding="utf-8").splitlines()
                 self.assertEqual(kural[0], "kural,sinir,gercek,rastgele,fark,cekilis")
                 self.assertIn("Kemik yapının tamamı", "".join(kural))
-                self.assertIn("Analiz karnesi", metin)
-                analiz = sl.ANALIZ_KARNESI_PATH.read_text(encoding="utf-8").splitlines()
-                self.assertEqual(analiz[0], "dagilim,bu_yil,bu_yil_yuzde,beklenen_yuzde,tum_yillar_yuzde,yil,cekilis,genel_p")
-                self.assertEqual(len(analiz), 8)
-                self.assertIn("Ardışık ikililer", metin)
-                self.assertIn("Birlikte en çok gelen ikililer", metin)
-                ardisik = sl.ARDISIK_KARNESI_PATH.read_text(encoding="utf-8").splitlines()
-                self.assertEqual(ardisik[0], "ardisik,tum,tum_yuzde,bu_yil,bu_yil_yuzde,rastgele_yuzde,yil")
-                ikili = sl.IKILI_KARNESI_PATH.read_text(encoding="utf-8").splitlines()
-                self.assertEqual(ikili[0], "ikili,tum,bu_yil,son_gelis,beklenen_tum,yil")
-                self.assertTrue(ikili[1].startswith("6-43,19,"))
+                self.assertIn("Analizler: 60 numara penceresi", metin)
+                pencere = sl.PENCERE_ANALIZI_PATH.read_text(encoding="utf-8").splitlines()
+                self.assertEqual(pencere[0], "bolum,deger,pencere,pencere_yuzde,tum_yuzde,rastgele_yuzde,"
+                                             "bas_no,son_no,cekilis")
+                listeler = sl.PENCERE_LISTELERI_PATH.read_text(encoding="utf-8").splitlines()
+                self.assertEqual(listeler[0], "bolum,deger,adet,bas_no,son_no,cekilis")
                 self.assertIn("Döngü kuralı", metin)
                 dongu = sl.DONGU_KARNESI_PATH.read_text(encoding="utf-8").splitlines()
                 self.assertTrue(dongu[0].startswith("sira,bas_no,bas_tarih"))
             finally:
-                (sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.ANALIZ_KARNESI_PATH,
-                 sl.ARDISIK_KARNESI_PATH, sl.IKILI_KARNESI_PATH, sl.DONGU_KARNESI_PATH) = eski
+                (sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.PENCERE_ANALIZI_PATH,
+                 sl.PENCERE_LISTELERI_PATH, sl.DONGU_KARNESI_PATH) = eski
 
     def test_karne_ilk_satiri_dogru_sayar(self):
         uygun = dict(CEKILISLER[-1], no=985, tarih="2026-11-15", toplar=[3, 14, 22, 38, 47, 59])
         with tempfile.TemporaryDirectory() as t:
-            eski = (sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.ANALIZ_KARNESI_PATH,
-                    sl.ARDISIK_KARNESI_PATH, sl.IKILI_KARNESI_PATH, sl.DONGU_KARNESI_PATH)
+            eski = (sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.PENCERE_ANALIZI_PATH,
+                    sl.PENCERE_LISTELERI_PATH, sl.DONGU_KARNESI_PATH)
             sl.DONGU_KARNESI_PATH = Path(t) / "dongu.csv"
-            sl.ARDISIK_KARNESI_PATH = Path(t) / "ardisik.csv"
-            sl.IKILI_KARNESI_PATH = Path(t) / "ikili.csv"
+            sl.PENCERE_LISTELERI_PATH = Path(t) / "listeler.csv"
             sl.KARNE_PATH = Path(t) / "karne.csv"
             sl.DEGERLENDIRME_PATH = Path(t) / "son.md"
             sl.KURAL_KARNESI_PATH = Path(t) / "kural.csv"
-            sl.ANALIZ_KARNESI_PATH = Path(t) / "analiz.csv"
+            sl.PENCERE_ANALIZI_PATH = Path(t) / "pencere.csv"
             try:
                 with redirect_stdout(io.StringIO()):
                     sl.degerlendir_ve_kaydet(CEKILISLER + [uygun], "")
                 self.assertIn("Kemik yapıya uyan çekiliş: 1/1",
                               sl.DEGERLENDIRME_PATH.read_text(encoding="utf-8"))
             finally:
-                (sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.ANALIZ_KARNESI_PATH,
-                 sl.ARDISIK_KARNESI_PATH, sl.IKILI_KARNESI_PATH, sl.DONGU_KARNESI_PATH) = eski
+                (sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.PENCERE_ANALIZI_PATH,
+                 sl.PENCERE_LISTELERI_PATH, sl.DONGU_KARNESI_PATH) = eski
 
 
-class AnalizKarnesiTest(unittest.TestCase):
-    def test_alt_ust_dagilimi_2026(self):
-        a = sl.analiz_karnesi(CEKILISLER)
-        self.assertEqual([r["dagilim"] for r in a["satirlar"]],
-                         ["6–0", "5–1", "4–2", "3–3", "2–4", "1–5", "0–6"])
-        self.assertEqual(a["yil"], "2026")
-        self.assertEqual(a["cekilis"], 136)                  # 984'e kadar 2026 çekilişleri
-        iki_dort = a["satirlar"][4]
-        self.assertEqual(iki_dort["bu_yil"], 44)
-        self.assertAlmostEqual(iki_dort["beklenen"], 0.2378, places=3)
-        self.assertEqual(sum(r["bu_yil"] for r in a["satirlar"]), 136)
-        self.assertTrue(0 < a["genel_p"] < 1)
+class PencereAnaliziTest(unittest.TestCase):
+    """Analizler, son çekilişten geriye 60 numaranın tamamlandığı pencere üzerinden yapılır."""
+    C985 = [VERI[k] for k in sorted(VERI) if k <= 985]
 
+    def test_pencere(self):
+        p = sl.pencere(self.C985)
+        self.assertEqual((p[0]["no"], p[-1]["no"], len(p)), (950, 985, 36))
+        self.assertEqual(len({t for c in p for t in c["toplar"]}), 60)
+        self.assertLess(len({t for c in p[1:] for t in c["toplar"]}), 60)   # en kısa pencere
+        p984 = sl.pencere(CEKILISLER)
+        self.assertEqual(p984[-1]["no"], 984)
 
-class IkiliKarnesiTest(unittest.TestCase):
-    def test_ardisik_ikililer(self):
-        a = sl.ardisik_karnesi(CEKILISLER)
-        self.assertEqual([r["ardisik"] for r in a["satirlar"]], ["0", "1", "2", "3+", "En az bir"])
-        sifir, bir = a["satirlar"][0], a["satirlar"][1]
-        self.assertEqual((sifir["tum"], bir["tum"]), (572, 331))    # 984'e kadar
-        self.assertEqual(bir["bu_yil"], 53)
-        self.assertAlmostEqual(sifir["rastgele"], 0.5791, places=3)  # C(55,6)/C(60,6)
-        self.assertAlmostEqual(sum(r["rastgele"] for r in a["satirlar"][:4]), 1.0, places=6)
+    def test_dagilimlar(self):
+        a = sl.pencere_analizi(self.C985)
+        self.assertEqual((a["bas_no"], a["son_no"], a["cekilis"]), (950, 985, 36))
+        satir = {(r["bolum"], r["deger"]): r for r in a["dagilimlar"]}
+        self.assertEqual(satir[("1–30 / 31–60", "2–4")]["pencere"], 19)
+        self.assertAlmostEqual(satir[("1–30 / 31–60", "2–4")]["rastgele"], 0.2378, places=3)
+        self.assertEqual(satir[("Tek / çift", "2–4")]["pencere"], 13)
+        self.assertEqual(satir[("Ardışık ikili", "0")]["pencere"], 21)
+        self.assertEqual(satir[("Üst üste (önceki çekilişten)", "3+")]["pencere"], 1)
+        for bolum in {r["bolum"] for r in a["dagilimlar"]}:
+            satirlar = [r for r in a["dagilimlar"] if r["bolum"] == bolum]
+            self.assertEqual(sum(r["pencere"] for r in satirlar), 36, bolum)
+            self.assertAlmostEqual(sum(r["rastgele"] for r in satirlar), 1.0, places=2)
 
-    def test_birlikte_gelen_ikililer(self):
-        a = sl.ikili_karnesi(CEKILISLER)
-        self.assertEqual(len(a["satirlar"]), 10)
-        ilk = a["satirlar"][0]
-        self.assertEqual((ilk["ikili"], ilk["tum"]), ("6-43", 19))
-        self.assertAlmostEqual(a["beklenen_tum"], 984 * 30 / 3540, places=2)
-        self.assertTrue(all(len(r["ikili"].split("-")) == 2 for r in a["satirlar"]))
+    def test_listeler(self):
+        a = sl.pencere_analizi(self.C985)
+        liste = {}
+        for r in a["listeler"]:
+            liste.setdefault(r["bolum"], []).append((r["deger"], r["adet"]))
+        self.assertEqual(liste["Numara sıklığı"][0], ("16", 9))
+        self.assertEqual(set(liste["Birlikte gelen (2+ kez)"][:3]), {("40-42", 3), ("14-56", 3), ("45-54", 3)})
+        self.assertEqual(liste["Üst üste gelen"][0], ("30", 3))
+        self.assertIn(("53-54", 2), liste["Ardışık ikili"])
+        self.assertEqual(liste["En uzun süredir gelmeyen"][0], ("13", 35))
+        ozet = dict(liste["Özet"])
+        self.assertEqual(ozet["Toplam ortalaması"], 200.2)
 
 
 class DonguTest(unittest.TestCase):

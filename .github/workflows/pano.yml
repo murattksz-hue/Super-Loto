@@ -1,13 +1,13 @@
 name: Panoyu güncelle
 
-# Pano verisini (issue #12, #13, #17, #19, #21, #22 ve #24) main'e elle gönderilen değişikliklerde
+# Pano verisini (issue #12, #13, #17, #19, #21 ve #24) main'e elle gönderilen değişikliklerde
 # ya da Actions sekmesinden elle günceller. Otomatik güncellemeler bunu
 # superloto.yml ve jupiter.yml içinde kendileri yapar.
 on:
   push:
     branches: [main]
-    paths: [superloto.csv, oyun_kolonlari.txt, kural_karnesi.csv, analiz_karnesi.csv, ardisik_karnesi.csv,
-            ikili_karnesi.csv, dongu_karnesi.csv, pano_guncelle.sh]
+    paths: [superloto.csv, oyun_kolonlari.txt, kural_karnesi.csv, pencere_analizi.csv,
+            pencere_listeleri.csv, dongu_karnesi.csv, pano_guncelle.sh]
   workflow_dispatch: {}
 
 permissions:

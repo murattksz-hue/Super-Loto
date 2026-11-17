@@ -24,6 +24,7 @@ import argparse
 import contextlib
 import csv
 import datetime
+import functools
 import io
 import json
 import math
@@ -1212,9 +1213,8 @@ def oyun_jupiter(cekilisler: list[dict], simdi: datetime.datetime) -> None:
 KARNE_PATH = Path(__file__).with_name("degerlendirme_karnesi.csv")
 DEGERLENDIRME_PATH = Path(__file__).with_name("son_degerlendirme.md")
 KURAL_KARNESI_PATH = Path(__file__).with_name("kural_karnesi.csv")
-ANALIZ_KARNESI_PATH = Path(__file__).with_name("analiz_karnesi.csv")
-ARDISIK_KARNESI_PATH = Path(__file__).with_name("ardisik_karnesi.csv")
-IKILI_KARNESI_PATH = Path(__file__).with_name("ikili_karnesi.csv")
+PENCERE_ANALIZI_PATH = Path(__file__).with_name("pencere_analizi.csv")
+PENCERE_LISTELERI_PATH = Path(__file__).with_name("pencere_listeleri.csv")
 DONGU_KARNESI_PATH = Path(__file__).with_name("dongu_karnesi.csv")
 # 60 numaranın tamamlandığı döngüler: bu çekilişten önceki döngüler geriye doğru
 # (#985'ten başlayarak) bulunur, bu çekilişten itibaren ileriye doğru izlenir.
@@ -1437,136 +1437,188 @@ def kural_karnesi_metni(satirlar: list[dict]) -> str:
     return "\n".join(r)
 
 
-def analiz_karnesi(cekilisler: list[dict]) -> dict:
-    """Son çekilişin yılında, bir çekilişte 1–30 ve 31–60 arasından kaçar
-    numara geldiğinin dağılımı; rastgele beklenen ve tüm yıllarla birlikte.
-    Kural değildir, yalnızca izlenir. genel_p: dağılımın rastgeleden bu kadar
-    sapma ihtimali (uçlar birleştirilmiş ki-kare, 4 serbestlik derecesi)."""
-    yil = cekilisler[-1]["tarih"][:4]
-    bu_yil = [c for c in cekilisler if c["tarih"].startswith(yil)]
-    sayac = Counter(sum(t <= 30 for t in c["toplar"]) for c in bu_yil)
-    tum = Counter(sum(t <= 30 for t in c["toplar"]) for c in cekilisler)
-    n = len(bu_yil)
-    beklenen = {a: math.comb(30, a) * math.comb(30, 6 - a) / math.comb(60, 6) for a in range(7)}
-    satirlar = [{"dagilim": f"{a}–{6 - a}", "bu_yil": sayac[a], "bu_yil_oran": sayac[a] / n,
-                 "beklenen": beklenen[a], "tum_yillar": tum[a] / len(cekilisler)}
-                for a in range(6, -1, -1)]
-    gruplar = [(0, 1), (2,), (3,), (4,), (5, 6)]
-    ki = sum((sum(sayac[a] for a in g) - n * sum(beklenen[a] for a in g)) ** 2
-             / (n * sum(beklenen[a] for a in g)) for g in gruplar)
-    return {"yil": yil, "cekilis": n, "satirlar": satirlar,
-            "genel_p": math.exp(-ki / 2) * (1 + ki / 2)}
-
-
-def analiz_karnesi_yaz(cekilisler: list[dict]) -> dict:
-    """Analiz karnesini hesaplar ve pano için analiz_karnesi.csv dosyasına yazar."""
-    a = analiz_karnesi(cekilisler)
-    with ANALIZ_KARNESI_PATH.open("w", encoding="utf-8", newline="") as f:
-        w = csv.writer(f, lineterminator="\n")
-        w.writerow(["dagilim", "bu_yil", "bu_yil_yuzde", "beklenen_yuzde", "tum_yillar_yuzde",
-                    "yil", "cekilis", "genel_p"])
-        for r in a["satirlar"]:
-            w.writerow([r["dagilim"], r["bu_yil"], f"{100 * r['bu_yil_oran']:.1f}",
-                        f"{100 * r['beklenen']:.1f}", f"{100 * r['tum_yillar']:.1f}",
-                        a["yil"], a["cekilis"], f"{a['genel_p']:.3f}"])
-    return a
-
-
-def analiz_karnesi_metni(a: dict) -> str:
-    def y(v):
-        return f"{100 * v:.1f}".replace(".", ",")
-    r = ["", "## Analiz karnesi (kural değil)", "",
-         f"{a['yil']} yılının {a['cekilis']} çekilişinde 1–30 ve 31–60 arasından kaçar numara geldi.", "",
-         f"| 1–30 / 31–60 | {a['yil']} | Oran | Rastgele beklenen | Tüm yıllar |",
-         "|---|---|---|---|---|"]
-    for s in a["satirlar"]:
-        r.append(f"| {s['dagilim']} | {s['bu_yil']} | %{y(s['bu_yil_oran'])} | "
-                 f"%{y(s['beklenen'])} | %{y(s['tum_yillar'])} |")
-    p = f"{a['genel_p']:.2f}".replace(".", ",")
-    r += ["", f"Rastgeleden bu kadar sapma ihtimali: p = {p} "
-          + ("(belirgin sapma; yine de sonraki çekilişi göstermez)." if a["genel_p"] < 0.01
-             else "(şans payı içinde, normal).")]
-    return "\n".join(r)
-
-
 def ardisik_ikililer(toplar: list[int]) -> list[tuple[int, int]]:
     t = sorted(toplar)
     return [(a, b) for a, b in zip(t, t[1:]) if b - a == 1]
 
 
-def ardisik_karnesi(cekilisler: list[dict]) -> dict:
-    """Bir çekilişte kaç ardışık ikili geldiği: tüm yıllar, son çekilişin yılı
-    ve rastgele beklenen (kesin formül: C(5, r) C(55, 6-r) / C(60, 6))."""
-    yil = cekilisler[-1]["tarih"][:4]
-    bu_yil = [c for c in cekilisler if c["tarih"].startswith(yil)]
-
-    def say(liste):
-        return Counter(min(3, len(ardisik_ikililer(c["toplar"]))) for c in liste)
-
-    tum, by = say(cekilisler), say(bu_yil)
-    olasilik = {r: math.comb(5, r) * math.comb(55, 6 - r) / math.comb(60, 6) for r in range(6)}
-    olasilik[3] = sum(olasilik[r] for r in range(3, 6))
-    satirlar = [{"ardisik": "3+" if r == 3 else str(r), "tum": tum[r], "bu_yil": by[r],
-                 "rastgele": olasilik[r]} for r in range(4)]
-    satirlar.append({"ardisik": "En az bir", "tum": len(cekilisler) - tum[0],
-                     "bu_yil": len(bu_yil) - by[0], "rastgele": 1 - olasilik[0]})
-    for x in satirlar:
-        x["tum_oran"] = x["tum"] / len(cekilisler)
-        x["bu_yil_oran"] = x["bu_yil"] / len(bu_yil)
-    return {"yil": yil, "cekilis": len(cekilisler), "bu_yil_cekilis": len(bu_yil), "satirlar": satirlar}
+def pencere(cekilisler: list[dict]) -> list[dict]:
+    """Analiz penceresi: son çekilişten geriye doğru 60 numaranın hepsi gelene
+    kadar gidilir; tamamlandığı çekilişten son çekilişe kadar (eskiden yeniye)."""
+    gor = set()
+    for j in range(len(cekilisler) - 1, -1, -1):
+        gor |= set(cekilisler[j]["toplar"])
+        if len(gor) == 60:
+            return cekilisler[j:]
+    return list(cekilisler)
 
 
-def ikili_karnesi(cekilisler: list[dict], adet: int = 10) -> dict:
-    """Tüm yıllarda birlikte en çok gelen ikililer; bu yılki sayıları ve son
-    gelişleri. Her ikilinin rastgele beklenen sayısı çekiliş × 15/1770."""
-    yil = cekilisler[-1]["tarih"][:4]
-    tum, by, son = Counter(), Counter(), {}
-    for c in cekilisler:
-        for p in combinations(sorted(c["toplar"]), 2):
-            tum[p] += 1
-            son[p] = c["tarih"]
-            if c["tarih"].startswith(yil):
-                by[p] += 1
-    satirlar = [{"ikili": f"{a}-{b}", "tum": n, "bu_yil": by[(a, b)], "son_gelis": son[(a, b)]}
-                for (a, b), n in sorted(tum.items(), key=lambda x: (-x[1], x[0]))[:adet]]
-    return {"yil": yil, "satirlar": satirlar, "beklenen_tum": len(cekilisler) * 30 / 3540}
+def _hiper(k_basari: int, x: int) -> float:
+    """60 numaradan 6 çekilince belirli k_basari numaradan tam x tanesinin gelme olasılığı."""
+    return math.comb(k_basari, x) * math.comb(60 - k_basari, 6 - x) / math.comb(60, 6)
 
 
-def ikili_karneleri_yaz(cekilisler: list[dict]) -> tuple[dict, dict]:
-    """Ardışık ve birlikte gelen ikili karnelerini pano için CSV'lere yazar."""
-    ar, ik = ardisik_karnesi(cekilisler), ikili_karnesi(cekilisler)
-    with ARDISIK_KARNESI_PATH.open("w", encoding="utf-8", newline="") as f:
+def _toplam_dilimi(t: int) -> str:
+    if t < 150:
+        return "150'den az"
+    if t >= 240:
+        return "240 ve üstü"
+    alt = 150 + (t - 150) // 30 * 30
+    return f"{alt}–{alt + 29}"
+
+
+PENCERE_BOLUMLERI = [
+    ("1–30 / 31–60", [f"{a}–{6 - a}" for a in range(6, -1, -1)],
+     lambda t, o: (lambda a: f"{a}–{6 - a}")(sum(x <= 30 for x in t))),
+    ("Tek / çift", [f"{a}–{6 - a}" for a in range(6, -1, -1)],
+     lambda t, o: (lambda a: f"{a}–{6 - a}")(sum(x % 2 for x in t))),
+    ("Asal sayısı", ["0", "1", "2", "3", "4+"],
+     lambda t, o: (lambda a: "4+" if a >= 4 else str(a))(sum(x in ASALLAR for x in t))),
+    ("Ardışık ikili", ["0", "1", "2", "3+"],
+     lambda t, o: (lambda a: "3+" if a >= 3 else str(a))(len(ardisik_ikililer(t)))),
+    ("Üst üste (önceki çekilişten)", ["0", "1", "2", "3+"],
+     lambda t, o: (lambda a: "3+" if a >= 3 else str(a))(len(set(t) & set(o)))),
+    ("Aynı onluktan en çok", ["1", "2", "3", "4+"],
+     lambda t, o: (lambda a: "4+" if a >= 4 else str(a))(max(Counter((x - 1) // 10 for x in t).values()))),
+    ("Aynı son haneden en çok", ["1", "2", "3", "4+"],
+     lambda t, o: (lambda a: "4+" if a >= 4 else str(a))(max(Counter(x % 10 for x in t).values()))),
+    ("Toplam", ["150'den az", "150–179", "180–209", "210–239", "240 ve üstü"],
+     lambda t, o: _toplam_dilimi(sum(t))),
+]
+
+
+@functools.lru_cache(maxsize=1)
+def _rastgele_oranlar(ornek: int = 100000) -> dict:
+    """Rastgele beklenen oranlar: kesin formülü olanlar formülle, diğerleri sabit
+    tohumlu örneklemle."""
+    kesin = {
+        "1–30 / 31–60": {f"{a}–{6 - a}": _hiper(30, a) for a in range(7)},
+        "Tek / çift": {f"{a}–{6 - a}": _hiper(30, a) for a in range(7)},
+        "Asal sayısı": {**{str(a): _hiper(len(ASALLAR), a) for a in range(4)},
+                        "4+": sum(_hiper(len(ASALLAR), a) for a in range(4, 7))},
+        "Ardışık ikili": {**{str(r): math.comb(5, r) * math.comb(55, 6 - r) / math.comb(60, 6)
+                             for r in range(3)},
+                          "3+": sum(math.comb(5, r) * math.comb(55, 6 - r) / math.comb(60, 6)
+                                    for r in range(3, 6))},
+        "Üst üste (önceki çekilişten)": {**{str(a): _hiper(6, a) for a in range(3)},
+                                         "3+": sum(_hiper(6, a) for a in range(3, 7))},
+    }
+    rng = random.Random(0)
+    say = {ad: Counter() for ad, _, _ in PENCERE_BOLUMLERI if ad not in kesin}
+    for _ in range(ornek):
+        t = sorted(rng.sample(SAYI_ARALIGI, 6))
+        for ad, _, f in PENCERE_BOLUMLERI:
+            if ad in say:
+                say[ad][f(t, [])] += 1
+    return {**kesin, **{ad: {k: n / ornek for k, n in c.items()} for ad, c in say.items()}}
+
+
+def pencere_analizi(cekilisler: list[dict]) -> dict:
+    """Bütün analizler, son 60 numara penceresi üzerinden; tüm geçmiş ve rastgele
+    beklenen karşılaştırma için yanında. Kural değildir."""
+    pen = pencere(cekilisler)
+    ilk = cekilisler.index(pen[0])
+    onceki = [cekilisler[ilk + i - 1]["toplar"] if ilk + i else [] for i in range(len(pen))]
+    rastgele = _rastgele_oranlar()
+    tum_n = len(cekilisler) - 1
+    dagilimlar = []
+    for ad, degerler, f in PENCERE_BOLUMLERI:
+        p_say = Counter(f(sorted(c["toplar"]), o) for c, o in zip(pen, onceki))
+        t_say = Counter(f(sorted(c["toplar"]), cekilisler[i - 1]["toplar"])
+                        for i, c in enumerate(cekilisler) if i)
+        for deger in degerler:
+            dagilimlar.append({"bolum": ad, "deger": deger, "pencere": p_say[deger],
+                               "pencere_oran": p_say[deger] / len(pen),
+                               "tum": t_say[deger] / tum_n if tum_n else 0.0,
+                               "rastgele": rastgele[ad].get(deger, 0.0)})
+    sik = Counter(t for c in pen for t in c["toplar"])
+    ikili = Counter(p for c in pen for p in combinations(sorted(c["toplar"]), 2))
+    ustuste = Counter(t for c, o in zip(pen, onceki) for t in set(c["toplar"]) & set(o))
+    ardisik = Counter(p for c in pen for p in ardisik_ikililer(c["toplar"]))
+    son_gorulme = {t: i for i, c in enumerate(pen) for t in c["toplar"]}
+    gecikme = sorted(((len(pen) - 1 - i, t) for t, i in son_gorulme.items()), key=lambda x: (-x[0], x[1]))
+    toplamlar = [sum(c["toplar"]) for c in pen]
+    listeler = []
+
+    def ekle(bolum, deger, adet):
+        listeler.append({"bolum": bolum, "deger": deger, "adet": adet})
+    for n in sorted(set(sik.values()), reverse=True):
+        ekle("Numara sıklığı", " ".join(str(t) for t in SAYI_ARALIGI if sik[t] == n), n)
+    for (a, b), n in sorted(ikili.items(), key=lambda x: (-x[1], x[0]))[:20]:
+        if n >= 2:
+            ekle("Birlikte gelen (2+ kez)", f"{a}-{b}", n)
+    for t, n in sorted(ustuste.items(), key=lambda x: (-x[1], x[0])):
+        ekle("Üst üste gelen", str(t), n)
+    for (a, b), n in sorted(ardisik.items(), key=lambda x: (-x[1], x[0])):
+        ekle("Ardışık ikili", f"{a}-{b}", n)
+    for g, t in gecikme[:10]:
+        ekle("En uzun süredir gelmeyen", str(t), g)
+    ekle("Özet", "Toplam ortalaması", round(sum(toplamlar) / len(pen), 1))
+    ekle("Özet", "En düşük toplam", min(toplamlar))
+    ekle("Özet", "En yüksek toplam", max(toplamlar))
+    ekle("Özet", "Ortalama tek sayı", round(sum(sum(t % 2 for t in c["toplar"]) for c in pen) / len(pen), 2))
+    ekle("Özet", "Ortalama asal sayı",
+         round(sum(sum(t in ASALLAR for t in c["toplar"]) for c in pen) / len(pen), 2))
+    ekle("Özet", "Kemik yapıya uyan", sum(kemik_ceza(c["toplar"], set(o)) == 0 for c, o in zip(pen, onceki)))
+    return {"bas_no": pen[0]["no"], "son_no": pen[-1]["no"], "bas_tarih": pen[0]["tarih"],
+            "son_tarih": pen[-1]["tarih"], "cekilis": len(pen),
+            "dagilimlar": dagilimlar, "listeler": listeler}
+
+
+def pencere_analizi_yaz(cekilisler: list[dict]) -> dict:
+    """Pencere analizini pano için iki CSV dosyasına yazar."""
+    a = pencere_analizi(cekilisler)
+    ek = [a["bas_no"], a["son_no"], a["cekilis"]]
+    with PENCERE_ANALIZI_PATH.open("w", encoding="utf-8", newline="") as f:
         w = csv.writer(f, lineterminator="\n")
-        w.writerow(["ardisik", "tum", "tum_yuzde", "bu_yil", "bu_yil_yuzde", "rastgele_yuzde", "yil"])
-        for r in ar["satirlar"]:
-            w.writerow([r["ardisik"], r["tum"], f"{100 * r['tum_oran']:.1f}", r["bu_yil"],
-                        f"{100 * r['bu_yil_oran']:.1f}", f"{100 * r['rastgele']:.1f}", ar["yil"]])
-    with IKILI_KARNESI_PATH.open("w", encoding="utf-8", newline="") as f:
+        w.writerow(["bolum", "deger", "pencere", "pencere_yuzde", "tum_yuzde", "rastgele_yuzde",
+                    "bas_no", "son_no", "cekilis"])
+        for r in a["dagilimlar"]:
+            w.writerow([r["bolum"], r["deger"], r["pencere"], f"{100 * r['pencere_oran']:.1f}",
+                        f"{100 * r['tum']:.1f}", f"{100 * r['rastgele']:.1f}", *ek])
+    with PENCERE_LISTELERI_PATH.open("w", encoding="utf-8", newline="") as f:
         w = csv.writer(f, lineterminator="\n")
-        w.writerow(["ikili", "tum", "bu_yil", "son_gelis", "beklenen_tum", "yil"])
-        for r in ik["satirlar"]:
-            w.writerow([r["ikili"], r["tum"], r["bu_yil"], r["son_gelis"],
-                        f"{ik['beklenen_tum']:.1f}", ik["yil"]])
-    return ar, ik
+        w.writerow(["bolum", "deger", "adet", "bas_no", "son_no", "cekilis"])
+        for r in a["listeler"]:
+            w.writerow([r["bolum"], r["deger"], r["adet"], *ek])
+    return a
 
 
-def ikili_karneleri_metni(ar: dict, ik: dict) -> str:
-    def y(v):
-        return f"{100 * v:.1f}".replace(".", ",")
-    r = ["", "### Ardışık ikililer", "",
-         f"Bir çekilişte kaç ardışık ikili (örneğin 15-16) geldi. 8-9-10 gibi bir seri iki ikili sayılır.", "",
-         f"| Ardışık ikili | Tüm yıllar ({ar['cekilis']}) | Oran | {ar['yil']} ({ar['bu_yil_cekilis']}) "
-         "| Oran | Rastgele beklenen |", "|---|---|---|---|---|---|"]
-    for s in ar["satirlar"]:
-        r.append(f"| {s['ardisik']} | {s['tum']} | %{y(s['tum_oran'])} | {s['bu_yil']} | "
-                 f"%{y(s['bu_yil_oran'])} | %{y(s['rastgele'])} |")
-    bek = f"{ik['beklenen_tum']:.1f}".replace(".", ",")
-    r += ["", "### Birlikte en çok gelen ikililer", "",
-          f"Tüm yıllarda; her ikili için rastgele beklenen yaklaşık {bek} kez. 1770 olası ikili "
-          "arasında en çok gelenin bunun iki katı kadar gelmesi normaldir.", "",
-          f"| İkili | Tüm yıllar | {ik['yil']} | Son geliş |", "|---|---|---|---|"]
-    for s in ik["satirlar"]:
-        r.append(f"| {s['ikili']} | {s['tum']} | {s['bu_yil']} | {s['son_gelis']} |")
+def pencere_analizi_metni(a: dict) -> str:
+    def y(x):
+        return f"{100 * x:.1f}".replace(".", ",")
+    n = a["cekilis"]
+    r = ["", "## Analizler: 60 numara penceresi", "",
+         f"Son çekilişten geriye 60 numaranın hepsinin geldiği çekilişler: #{a['bas_no']}–#{a['son_no']} "
+         f"({a['bas_tarih']} – {a['son_tarih']}, {n} çekiliş). Bütün analizler bu pencere üzerinden "
+         "yapılır; tüm geçmiş ve rastgele beklenen karşılaştırma içindir. Kural değildir.", ""]
+    for ad, degerler, _ in PENCERE_BOLUMLERI:
+        r += [f"### {ad}", "", f"| Değer | Pencere ({n}) | Oran | Tüm geçmiş | Rastgele | Fark |",
+              "|---|---|---|---|---|---|"]
+        for x in (x for x in a["dagilimlar"] if x["bolum"] == ad):
+            p = x["rastgele"]
+            belirgin = n and abs(x["pencere"] - n * p) > 3 * (n * p * (1 - p)) ** 0.5 + 1e-9
+            r.append(f"| {x['deger']} | {x['pencere']} | %{y(x['pencere_oran'])} | %{y(x['tum'])} | "
+                     f"%{y(p)} | {'belirgin' if belirgin else ''} |")
+        r.append("")
+    gruplar = {}
+    for x in a["listeler"]:
+        gruplar.setdefault(x["bolum"], []).append(x)
+    yazim = {
+        "Numara sıklığı": lambda x: f"{x['adet']} kez: {x['deger']}",
+        "Birlikte gelen (2+ kez)": lambda x: f"{x['deger']} ({x['adet']})",
+        "Üst üste gelen": lambda x: f"{x['deger']} ({x['adet']})",
+        "Ardışık ikili": lambda x: f"{x['deger']} ({x['adet']})",
+        "En uzun süredir gelmeyen": lambda x: f"{x['deger']} ({x['adet']} çekiliş)",
+        "Özet": lambda x: f"{x['deger']}: {str(x['adet']).replace('.', ',')}",
+    }
+    for ad, f in yazim.items():
+        if ad not in gruplar:
+            continue
+        if ad == "Numara sıklığı":
+            r += [f"### {ad}", ""] + [f"- {f(x)}" for x in gruplar[ad]] + [""]
+        else:
+            r.append(f"**{ad}:** " + ", ".join(f(x) for x in gruplar[ad]))
     return "\n".join(r)
 
 
@@ -1730,7 +1782,6 @@ def kural_karnesi_yaz(cekilisler: list[dict]) -> list[dict]:
 
 def karne_ozeti(satirlar: list[dict], kemik_oran: float,
                 kurallar: list[dict] | None = None, analiz: dict | None = None,
-                ikililer: tuple[dict, dict] | None = None,
                 dongu: tuple[list[dict], list[dict]] | None = None) -> str:
     """Biriken değerlendirmelerden karne ve kanıta dayalı öneriler."""
     n = len(satirlar)
@@ -1753,9 +1804,7 @@ def karne_ozeti(satirlar: list[dict], kemik_oran: float,
     if kurallar:
         r.append(kural_karnesi_metni(kurallar))
     if analiz:
-        r.append(analiz_karnesi_metni(analiz))
-    if ikililer:
-        r.append(ikili_karneleri_metni(*ikililer))
+        r.append(pencere_analizi_metni(analiz))
     if dongu:
         r.append(dongu_karnesi_metni(*dongu))
     r += ["", "## Öneriler", ""]
@@ -1793,8 +1842,7 @@ def degerlendir_ve_kaydet(cekilisler: list[dict], kupon_metni: str | None = None
         kupon_metni = gecmis_kupon_metni(son["tarih"])
     d = cekilis_degerlendir(cekilisler, kupon_metni)
     kurallar = kural_karnesi_yaz(cekilisler)
-    analiz = analiz_karnesi_yaz(cekilisler)
-    ikililer = ikili_karneleri_yaz(cekilisler)
+    analiz = pencere_analizi_yaz(cekilisler)
     satirlar = karne_oku()
     if not any(s["no"] == str(son["no"]) for s in satirlar):
         satirlar.append({"no": d["no"], "tarih": d["tarih"], "toplam": d["toplam"], "tek": d["tek"],
@@ -1807,7 +1855,7 @@ def degerlendir_ve_kaydet(cekilisler: list[dict], kupon_metni: str | None = None
             w = csv.DictWriter(f, fieldnames=KARNE_ALANLARI)
             w.writeheader()
             w.writerows(satirlar)
-    metin = (d["rapor"] + "\n" + karne_ozeti(satirlar, d["kemik_oran"], kurallar, analiz, ikililer,
+    metin = (d["rapor"] + "\n" + karne_ozeti(satirlar, d["kemik_oran"], kurallar, analiz,
                           (cekilisler, dongu_karnesi_yaz(cekilisler)))
              + "\n\nNot: Her çekiliş bağımsızdır; bu değerlendirme geçmişi özetler, "
                "sonraki çekilişi tahmin etmez.\n")
@@ -1834,8 +1882,8 @@ def main() -> None:
                    help="son çekilişi değerlendir: normal mi, kupon nasıl tuttu, kurallara uyuyor muydu; "
                         "karneye ekle")
     p.add_argument("--kural-karnesi", action="store_true",
-                   help="kural karnesini ve analiz karnelerini (1–30/31–60, ardışık ikililer, "
-                        "birlikte gelen ikililer, döngüler) CSV dosyalarına yaz")
+                   help="kural karnesini, 60 numara penceresi analizlerini ve döngüleri "
+                        "CSV dosyalarına yaz")
     p.add_argument("--oyun", choices=["planla", "jupiter"],
                    help="oyun_kolonlari.txt: 'planla' sonraki çekiliş gününü hazırlar, "
                         "'jupiter' çekiliş günü Jüpiter saatindeyse kolonları üretir")
@@ -1866,8 +1914,7 @@ def main() -> None:
         return
     if a.kural_karnesi:
         print(kural_karnesi_metni(kural_karnesi_yaz(cekilisler)).strip())
-        print(analiz_karnesi_metni(analiz_karnesi_yaz(cekilisler)))
-        print(ikili_karneleri_metni(*ikili_karneleri_yaz(cekilisler)))
+        print(pencere_analizi_metni(pencere_analizi_yaz(cekilisler)))
         print(dongu_karnesi_metni(cekilisler, dongu_karnesi_yaz(cekilisler)))
         return
     if a.oyun == "planla":
