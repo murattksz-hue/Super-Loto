@@ -1,11 +1,13 @@
 name: Jüpiter saatinde kolon üret
 
-# Çekiliş günleri (Salı, Perşembe, Pazar) 07:00–21:00 TR arasında 10 dakikada bir çalışır.
-# Script yalnızca Ankara'da günün ilk Jüpiter saatindeyse kolonları üretir
-# (kaçırılırsa bir sonraki Jüpiter saatinde); diğer çalıştırmalarda hiçbir şey yapmaz.
+# Çekiliş günleri (Salı, Perşembe, Pazar) 07:07–20:07 TR arasında saatte bir çalışır.
+# GitHub zamanlanmış işleri geciktirebildiği için (10 dakikalık iş saatte bir
+# çalışabiliyor), Jüpiter saati 2 saat içinde başlayacaksa iş o saate kadar bekler
+# ve kolonları Jüpiter saatinde üretir. Kaçırılırsa bir sonraki Jüpiter saatinde
+# üretilir; kolonlar zaten üretildiyse hiçbir şey yapılmaz.
 on:
   schedule:
-    - cron: "*/10 4-17 * * 0,2,4"
+    - cron: "7 4-17 * * 0,2,4"
   workflow_dispatch: {}
 
 permissions:
@@ -19,7 +21,7 @@ concurrency:
 jobs:
   uret:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v5
 
@@ -28,7 +30,7 @@ jobs:
           python-version: "3.12"
 
       - name: Jüpiter saatindeyse kolonları üret
-        run: python3 superloto.py --analiz --oyun jupiter
+        run: python3 superloto.py --analiz --oyun jupiter --bekle 7200
 
       - name: Üretildiyse kaydet
         run: |
