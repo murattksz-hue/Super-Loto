@@ -129,6 +129,7 @@ Her çekilişten sonra script kendini sorgular ve `son_degerlendirme.md` dosyas�
 - **Karne:** Her değerlendirme `degerlendirme_karnesi.csv` dosyasına bir kez eklenir. Kemik yapıya uyan çekilişler, dikkat çekici durumlar ve kuponların 3+ bilme sayısı birikir.
 - **Kural karnesi:** Her kural tüm geçmiş çekilişlerle karşılaştırılır: gerçek çekilişlerin yüzde kaçı uyuyor, rastgele numaraların yüzde kaçı uyuyor. Bir kural işe yarasaydı iki oran belirgin farklı olurdu. Güç dengesi ve uzun süredir çıkmayanlar son 300 çekilişte, her biri kendinden önceki veriyle ölçülür.
 - **Analiz karnesi (kural değil):** Bu yılın çekilişlerinde bir çekilişte 1–30 ve 31–60 arasından kaçar numara geldiği; rastgele beklenen ve tüm yıllarla karşılaştırılır. Ayrıca ardışık ikililer (bir çekilişte kaç tane) ve birlikte en çok gelen 10 ikili izlenir; üçlü ve üstü eklenmez.
+- **Döngü karnesi (kural değil):** Döngü, 60 numaranın hepsinin geldiği ardışık çekilişlerdir. #985'e kadarki döngüler geriye doğru bulunur, #986'dan itibaren ileriye doğru izlenir. Her çekilişten sonra şu anki döngüde henüz gelmeyen numaralar "sıradaki tahmin" olarak yazılır. Tahminin isabeti (gelmeyenlerden kaçı geldi) rastgele beklentiyle birlikte hem takip boyunca hem geriye dönük test olarak ölçülür.
 - **Öneriler:** Kural karnesinden hemen, kendi kuponlarımızın sonuçlarından ise 30 kuponlu çekiliş birikince kanıta dayalı öneriler verir. Kurallar hiçbir zaman otomatik değişmez; kararı siz verirsiniz.
 
 Her çekiliş bağımsızdır. Değerlendirme geçmişi özetler, sonraki çekilişi tahmin etmez.
@@ -145,7 +146,8 @@ Her çekiliş bağımsızdır. Değerlendirme geçmişi özetler, sonraki çekil
 - `analiz_karnesi.csv`: bu yılın çekilişlerinde 1–30 ve 31–60 arasından kaçar numara geldiği; kural değildir, yalnızca izlenir
 - `ardisik_karnesi.csv`: bir çekilişte kaç ardışık ikili geldiği (tüm yıllar, bu yıl, rastgele beklenen)
 - `ikili_karnesi.csv`: birlikte en çok gelen 10 ikili, bu yılki sayıları ve son gelişleri
-- `pano_guncelle.sh`: `superloto.csv`, `oyun_kolonlari.txt` `kural_karnesi.csv`, `analiz_karnesi.csv`, `ardisik_karnesi.csv` ve `ikili_karnesi.csv` dosyalarının güncel halini pano için #12, #13, #17, #19, #21 ve #22 numaralı issue'lara kopyalar. Bu issue'ları kapatmayın.
+- `dongu_karnesi.csv`: 60 numaranın tamamlandığı döngüler, şu anki döngüde henüz gelmeyen numaralar ve tahmin isabeti
+- `pano_guncelle.sh`: `superloto.csv`, `oyun_kolonlari.txt` `kural_karnesi.csv`, `analiz_karnesi.csv`, `ardisik_karnesi.csv`, `ikili_karnesi.csv` ve `dongu_karnesi.csv` dosyalarının güncel halini pano için #12, #13, #17, #19, #21, #22 ve #24 numaralı issue'lara kopyalar. Bu issue'ları kapatmayın.
 
 ## Testler
 

@@ -1035,6 +1035,11 @@ KURAL_KARNESI_PATH = Path(__file__).with_name("kural_karnesi.csv")
 ANALIZ_KARNESI_PATH = Path(__file__).with_name("analiz_karnesi.csv")
 ARDISIK_KARNESI_PATH = Path(__file__).with_name("ardisik_karnesi.csv")
 IKILI_KARNESI_PATH = Path(__file__).with_name("ikili_karnesi.csv")
+DONGU_KARNESI_PATH = Path(__file__).with_name("dongu_karnesi.csv")
+# 60 numaranın tamamlandığı döngüler: bu çekilişten önceki döngüler geriye doğru
+# (#985'ten başlayarak) bulunur, bu çekilişten itibaren ileriye doğru izlenir.
+DONGU_CAPA = 986
+SON_DONEM_GUN = 548  # "son 1,5 yıl"
 KARNE_ALANLARI = ["no", "tarih", "toplam", "tek", "ardisik", "tekrar", "kemik_uygun",
                   "dikkat_sayisi", "kupon_var", "en_iyi", "uc_ve_ustu"]
 
@@ -1385,6 +1390,138 @@ def ikili_karneleri_metni(ar: dict, ik: dict) -> str:
     return "\n".join(r)
 
 
+def _dongu_kaydi(parca: list[dict], tamam: bool, tamamlayan: list[int]) -> dict:
+    gelen = {t for c in parca for t in c["toplar"]}
+    return {"bas_no": parca[0]["no"], "bas_tarih": parca[0]["tarih"],
+            "son_no": parca[-1]["no"], "son_tarih": parca[-1]["tarih"], "uzunluk": len(parca),
+            "durum": "tamam" if tamam else "devam", "gelen": len(gelen),
+            "tamamlayan": tamamlayan if tamam else [],
+            "eksik": [] if tamam else sorted(set(SAYI_ARALIGI) - gelen)}
+
+
+def donguler(cekilisler: list[dict], capa: int = DONGU_CAPA) -> list[dict]:
+    """60 numaranın hepsinin geldiği ardışık çekiliş blokları (döngüler), eskiden
+    yeniye. `capa`dan önceki çekilişler geriye doğru bölünür (son döngü capa-1'de
+    biter, en eski tamamlanmayan parça atılır); capa ve sonrası ileriye doğru
+    izlenir. Son döngü tamamlandıysa, sıradaki çekilişle başlayacak boş bir
+    "devam" döngüsü eklenir (hiçbir numara henüz gelmemiş)."""
+    gecmis = [c for c in cekilisler if c["no"] < capa]
+    ileri = [c for c in cekilisler if c["no"] >= capa]
+    sonuc = []
+    i = len(gecmis) - 1
+    while i >= 0:
+        gor, j, yeni = set(), i, set()
+        while j >= 0 and len(gor) < 60:
+            yeni = set(gecmis[j]["toplar"]) - gor
+            gor |= yeni
+            j -= 1
+        if len(gor) < 60:
+            break
+        sonuc.append(_dongu_kaydi(gecmis[j + 1:i + 1], True, sorted(yeni)))
+        i = j
+    sonuc.reverse()
+    bas = 0
+    while bas < len(ileri):
+        gor, k, yeni = set(), bas, set()
+        while k < len(ileri) and len(gor) < 60:
+            yeni = set(ileri[k]["toplar"]) - gor
+            gor |= yeni
+            k += 1
+        sonuc.append(_dongu_kaydi(ileri[bas:k], len(gor) == 60, sorted(yeni)))
+        bas = k
+    if not sonuc or sonuc[-1]["durum"] == "tamam":
+        son = cekilisler[-1]
+        sonraki = sonraki_cekilis(son["tarih"]).isoformat()
+        sonuc.append({"bas_no": son["no"] + 1, "bas_tarih": sonraki, "son_no": son["no"],
+                      "son_tarih": son["tarih"], "uzunluk": 0, "durum": "devam", "gelen": 0,
+                      "tamamlayan": [], "eksik": list(SAYI_ARALIGI)})
+    for n, d in enumerate(sonuc, 1):
+        d["sira"] = n
+    return sonuc
+
+
+def dongu_tahmin_skoru(cekilisler: list[dict], capa: int = DONGU_CAPA) -> list[dict]:
+    """İleriye doğru izlenen döngülerde, her çekilişten önce o döngüde henüz
+    gelmemiş numaralar "tahmin"dir. Her çekilişte bunlardan kaçının geldiği
+    (isabet) ve rastgele beklenen (6 × eksik / 60)."""
+    sonuc, gor = [], set()
+    for c in (c for c in cekilisler if c["no"] >= capa):
+        if len(gor) == 60:
+            gor = set()
+        eksik = set(SAYI_ARALIGI) - gor
+        sonuc.append({"no": c["no"], "tarih": c["tarih"], "eksik_sayisi": len(eksik),
+                      "isabet": len(eksik & set(c["toplar"])), "beklenen": 6 * len(eksik) / 60})
+        gor |= set(c["toplar"])
+    return sonuc
+
+
+def dongu_tahmin_testi(cekilisler: list[dict]) -> tuple[int, float, int]:
+    """Geriye dönük test: tüm geçmiş ileriye doğru döngülere bölünür ve her
+    çekilişte (döngünün ilk çekilişi hariç) eksik numaralardan gelen sayısı
+    rastgele beklenenle toplanır. Dönüş: (isabet, beklenen, çekiliş)."""
+    s = [x for x in dongu_tahmin_skoru(cekilisler, capa=cekilisler[0]["no"]) if x["eksik_sayisi"] < 60]
+    return sum(x["isabet"] for x in s), sum(x["beklenen"] for x in s), len(s)
+
+
+def dongu_karnesi_yaz(cekilisler: list[dict]) -> list[dict]:
+    """Döngüleri ve ileriye doğru tahmin isabetini pano için dongu_karnesi.csv'ye yazar."""
+    d = donguler(cekilisler)
+    skor = dongu_tahmin_skoru(cekilisler)
+    with DONGU_KARNESI_PATH.open("w", encoding="utf-8", newline="") as f:
+        w = csv.writer(f, lineterminator="\n")
+        w.writerow(["sira", "bas_no", "bas_tarih", "son_no", "son_tarih", "uzunluk", "durum",
+                    "gelen", "tamamlayan", "eksik", "isabet", "beklenen"])
+        for x in d:
+            ici = [s for s in skor if x["bas_no"] <= s["no"] <= x["son_no"] and s["eksik_sayisi"] < 60]
+            w.writerow([x["sira"], x["bas_no"], x["bas_tarih"], x["son_no"], x["son_tarih"],
+                        x["uzunluk"], x["durum"], x["gelen"], " ".join(map(str, x["tamamlayan"])),
+                        " ".join(map(str, x["eksik"])),
+                        sum(s["isabet"] for s in ici) if ici else "",
+                        f"{sum(s['beklenen'] for s in ici):.1f}" if ici else ""])
+    return d
+
+
+def dongu_karnesi_metni(cekilisler: list[dict], d: list[dict]) -> str:
+    def v(x, n=1):
+        return f"{x:.{n}f}".replace(".", ",")
+    simdi = d[-1]
+    tam = [x for x in d if x["durum"] == "tamam"]
+    sinir = (datetime.date.fromisoformat(cekilisler[-1]["tarih"])
+             - datetime.timedelta(days=SON_DONEM_GUN)).isoformat()
+    yakin = [x["uzunluk"] for x in tam if x["bas_tarih"] >= sinir]
+    tum = [x["uzunluk"] for x in tam]
+    ort_yakin = sum(yakin) / len(yakin) if yakin else None
+    ort_tum = sum(tum) / len(tum)
+    r = ["", "## Döngü karnesi", "",
+         "Döngü: 60 numaranın hepsinin geldiği ardışık çekilişler. Kural değil, yalnızca izlenir.", ""]
+    if simdi["uzunluk"]:
+        r.append(f"**Şu anki döngü:** #{simdi['bas_no']}'dan beri {simdi['uzunluk']} çekiliş, "
+                 f"60 numaranın {simdi['gelen']} tanesi geldi.")
+    else:
+        r.append(f"**Şu anki döngü:** #{simdi['bas_no']} ile başlayacak; henüz hiçbir numara gelmedi.")
+    r.append(f"**Sıradaki tahmin (bu döngüde henüz gelmeyen {len(simdi['eksik'])} numara):** "
+             + " ".join(map(str, simdi["eksik"])))
+    if ort_yakin is not None:
+        kalan = max(0, round(ort_yakin) - simdi["uzunluk"])
+        r.append(f"Son 1,5 yılın döngü ortalaması {v(ort_yakin)} çekiliş (tüm geçmiş {v(ort_tum)}); "
+                 f"buna göre döngünün tamamlanmasına yaklaşık {kalan} çekiliş kaldı.")
+    skor = [s for s in dongu_tahmin_skoru(cekilisler) if s["eksik_sayisi"] < 60]
+    test_i, test_b, test_n = dongu_tahmin_testi(cekilisler)
+    r += ["", "**Tahmin isabeti:** her çekilişte, o döngüde henüz gelmeyen numaralardan kaçı geldi."]
+    if skor:
+        r.append(f"- Takip başladığından beri ({len(skor)} çekiliş): {sum(s['isabet'] for s in skor)} "
+                 f"isabet, rastgele beklenen {v(sum(s['beklenen'] for s in skor))}.")
+    else:
+        r.append("- Takip #986'dan sonraki çekilişlerle ölçülmeye başlayacak.")
+    r.append(f"- Geriye dönük test ({test_n} çekiliş): {test_i} isabet, rastgele beklenen "
+             f"{v(test_b)}. Fark yoksa tahmin rastgeleden iyi değildir.")
+    r += ["", "| Döngü | Çekilişler | Başlangıç | Kaç çekilişte | Son tamamlayan |", "|---|---|---|---|---|"]
+    for x in tam[-10:][::-1]:
+        r.append(f"| {x['sira']} | #{x['bas_no']}–#{x['son_no']} | {x['bas_tarih']} | {x['uzunluk']} | "
+                 + " ".join(map(str, x["tamamlayan"])) + " |")
+    return "\n".join(r)
+
+
 def kural_karnesi_yaz(cekilisler: list[dict]) -> list[dict]:
     """Kural karnesini hesaplar ve pano için kural_karnesi.csv dosyasına yazar."""
     kurallar = kural_karnesi(cekilisler)
@@ -1399,7 +1536,8 @@ def kural_karnesi_yaz(cekilisler: list[dict]) -> list[dict]:
 
 def karne_ozeti(satirlar: list[dict], kemik_oran: float,
                 kurallar: list[dict] | None = None, analiz: dict | None = None,
-                ikililer: tuple[dict, dict] | None = None) -> str:
+                ikililer: tuple[dict, dict] | None = None,
+                dongu: tuple[list[dict], list[dict]] | None = None) -> str:
     """Biriken değerlendirmelerden karne ve kanıta dayalı öneriler."""
     n = len(satirlar)
     r = ["", "## Karne", "", f"Değerlendirilen çekiliş: {n}"]
@@ -1424,6 +1562,8 @@ def karne_ozeti(satirlar: list[dict], kemik_oran: float,
         r.append(analiz_karnesi_metni(analiz))
     if ikililer:
         r.append(ikili_karneleri_metni(*ikililer))
+    if dongu:
+        r.append(dongu_karnesi_metni(*dongu))
     r += ["", "## Öneriler", ""]
     oneri = []
     if kurallar:
@@ -1473,7 +1613,8 @@ def degerlendir_ve_kaydet(cekilisler: list[dict], kupon_metni: str | None = None
             w = csv.DictWriter(f, fieldnames=KARNE_ALANLARI)
             w.writeheader()
             w.writerows(satirlar)
-    metin = (d["rapor"] + "\n" + karne_ozeti(satirlar, d["kemik_oran"], kurallar, analiz, ikililer)
+    metin = (d["rapor"] + "\n" + karne_ozeti(satirlar, d["kemik_oran"], kurallar, analiz, ikililer,
+                          (cekilisler, dongu_karnesi_yaz(cekilisler)))
              + "\n\nNot: Her çekiliş bağımsızdır; bu değerlendirme geçmişi özetler, "
                "sonraki çekilişi tahmin etmez.\n")
     DEGERLENDIRME_PATH.write_text(metin, encoding="utf-8")
@@ -1500,7 +1641,7 @@ def main() -> None:
                         "karneye ekle")
     p.add_argument("--kural-karnesi", action="store_true",
                    help="kural karnesini ve analiz karnelerini (1–30/31–60, ardışık ikililer, "
-                        "birlikte gelen ikililer) CSV dosyalarına yaz")
+                        "birlikte gelen ikililer, döngüler) CSV dosyalarına yaz")
     p.add_argument("--oyun", choices=["planla", "jupiter"],
                    help="oyun_kolonlari.txt: 'planla' sonraki çekiliş gününü hazırlar, "
                         "'jupiter' çekiliş günü Jüpiter saatindeyse kolonları üretir")
@@ -1533,6 +1674,7 @@ def main() -> None:
         print(kural_karnesi_metni(kural_karnesi_yaz(cekilisler)).strip())
         print(analiz_karnesi_metni(analiz_karnesi_yaz(cekilisler)))
         print(ikili_karneleri_metni(*ikili_karneleri_yaz(cekilisler)))
+        print(dongu_karnesi_metni(cekilisler, dongu_karnesi_yaz(cekilisler)))
         return
     if a.oyun == "planla":
         oyun_planla(cekilisler)

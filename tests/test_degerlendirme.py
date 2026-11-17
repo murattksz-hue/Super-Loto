@@ -57,7 +57,8 @@ class DegerlendirmeTest(unittest.TestCase):
     def test_karne_birikir_ve_tekrarlamaz(self):
         with tempfile.TemporaryDirectory() as t:
             eski = (sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.ANALIZ_KARNESI_PATH,
-                    sl.ARDISIK_KARNESI_PATH, sl.IKILI_KARNESI_PATH)
+                    sl.ARDISIK_KARNESI_PATH, sl.IKILI_KARNESI_PATH, sl.DONGU_KARNESI_PATH)
+            sl.DONGU_KARNESI_PATH = Path(t) / "dongu.csv"
             sl.ARDISIK_KARNESI_PATH = Path(t) / "ardisik.csv"
             sl.IKILI_KARNESI_PATH = Path(t) / "ikili.csv"
             sl.KARNE_PATH = Path(t) / "karne.csv"
@@ -87,15 +88,19 @@ class DegerlendirmeTest(unittest.TestCase):
                 ikili = sl.IKILI_KARNESI_PATH.read_text(encoding="utf-8").splitlines()
                 self.assertEqual(ikili[0], "ikili,tum,bu_yil,son_gelis,beklenen_tum,yil")
                 self.assertTrue(ikili[1].startswith("6-43,19,"))
+                self.assertIn("Döngü karnesi", metin)
+                dongu = sl.DONGU_KARNESI_PATH.read_text(encoding="utf-8").splitlines()
+                self.assertTrue(dongu[0].startswith("sira,bas_no,bas_tarih"))
             finally:
                 (sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.ANALIZ_KARNESI_PATH,
-                 sl.ARDISIK_KARNESI_PATH, sl.IKILI_KARNESI_PATH) = eski
+                 sl.ARDISIK_KARNESI_PATH, sl.IKILI_KARNESI_PATH, sl.DONGU_KARNESI_PATH) = eski
 
     def test_karne_ilk_satiri_dogru_sayar(self):
         uygun = dict(CEKILISLER[-1], no=985, tarih="2026-11-15", toplar=[3, 14, 22, 38, 47, 59])
         with tempfile.TemporaryDirectory() as t:
             eski = (sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.ANALIZ_KARNESI_PATH,
-                    sl.ARDISIK_KARNESI_PATH, sl.IKILI_KARNESI_PATH)
+                    sl.ARDISIK_KARNESI_PATH, sl.IKILI_KARNESI_PATH, sl.DONGU_KARNESI_PATH)
+            sl.DONGU_KARNESI_PATH = Path(t) / "dongu.csv"
             sl.ARDISIK_KARNESI_PATH = Path(t) / "ardisik.csv"
             sl.IKILI_KARNESI_PATH = Path(t) / "ikili.csv"
             sl.KARNE_PATH = Path(t) / "karne.csv"
@@ -109,7 +114,7 @@ class DegerlendirmeTest(unittest.TestCase):
                               sl.DEGERLENDIRME_PATH.read_text(encoding="utf-8"))
             finally:
                 (sl.KARNE_PATH, sl.DEGERLENDIRME_PATH, sl.KURAL_KARNESI_PATH, sl.ANALIZ_KARNESI_PATH,
-                 sl.ARDISIK_KARNESI_PATH, sl.IKILI_KARNESI_PATH) = eski
+                 sl.ARDISIK_KARNESI_PATH, sl.IKILI_KARNESI_PATH, sl.DONGU_KARNESI_PATH) = eski
 
 
 class AnalizKarnesiTest(unittest.TestCase):
@@ -143,6 +148,35 @@ class IkiliKarnesiTest(unittest.TestCase):
         self.assertEqual((ilk["ikili"], ilk["tum"]), ("6-43", 19))
         self.assertAlmostEqual(a["beklenen_tum"], 984 * 30 / 3540, places=2)
         self.assertTrue(all(len(r["ikili"].split("-")) == 2 for r in a["satirlar"]))
+
+
+class DonguTest(unittest.TestCase):
+    def test_geriye_dogru_donguler(self):
+        d = sl.donguler(CEKILISLER, capa=985)          # 984'e kadar veri: hepsi geçmiş döngü
+        tam = [x for x in d if x["durum"] == "tamam"]
+        self.assertEqual(tam[-1]["son_no"], 984)
+        for x in tam:
+            numaralar = {t for c in CEKILISLER if x["bas_no"] <= c["no"] <= x["son_no"] for t in c["toplar"]}
+            self.assertEqual(len(numaralar), 60)
+            self.assertEqual(x["uzunluk"], x["son_no"] - x["bas_no"] + 1)
+        self.assertGreater(len(tam), 15)
+
+    def test_ileriye_dogru_yeni_dongu(self):
+        d = sl.donguler(CEKILISLER, capa=980)
+        self.assertEqual(d[-2]["son_no"], 979)            # geçmiş döngüler 979'da biter
+        yeni = d[-1]
+        self.assertEqual((yeni["durum"], yeni["bas_no"], yeni["son_no"]), ("devam", 980, 984))
+        gelen = {t for c in CEKILISLER if c["no"] >= 980 for t in c["toplar"]}
+        self.assertEqual(yeni["eksik"], sorted(set(range(1, 61)) - gelen))
+
+    def test_tahmin_skoru(self):
+        s = sl.dongu_tahmin_skoru(CEKILISLER, capa=980)
+        self.assertEqual(len(s), 5)                       # 980..984
+        self.assertEqual((s[0]["isabet"], s[0]["beklenen"]), (6, 6.0))  # ilk çekilişte hepsi eksik
+        c980 = set(CEKILISLER[-5]["toplar"])
+        c981 = set(CEKILISLER[-4]["toplar"])
+        self.assertEqual(s[1]["isabet"], 6 - len(c980 & c981))
+        self.assertAlmostEqual(s[1]["beklenen"], 6 * (60 - 6) / 60)
 
 
 if __name__ == "__main__":
