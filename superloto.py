@@ -693,7 +693,7 @@ def taklit_kontrol(kolon: list[int], h: dict, son_toplar: list[int],
 # toleransı, toplam toleransı çarpanı). Son kademede taklitçi kural bırakılır.
 ESNEKLIK = [(0, 0, 0, 1), (1, 1, 0, 1), (1, 1, 1, 2), None]
 ESNEKLIK_METNI = ["", "tek ve son hane ±1", "tek, son hane ve ardışık ±1, toplam aralığı iki kat",
-                  "taklitçi kural (yalnızca kemik yapı kaldı)"]
+                  "taklitçi kural (kemik yapı ve farklı düzen kaldı)"]
 
 
 def taklit_zorunlu(kolon: list[int], h: dict, son_toplar: list[int], tolerans: int,
@@ -842,15 +842,43 @@ def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
                     for d in range(6):
                         for _ in range(bos[i][d]):
                             kolonlar[i].append(havuz[d].pop())
-                # Sığmayanlar onluk dışı takasla döngü kolonuna alınır (iki kolonun onluk
-                # dağılımı şablondan ayrılır).
-                for t in sorted(eksik):
-                    if t in kolonlar[dkol]:
-                        continue
-                    p = next(i for i in range(10) if t in kolonlar[i])
-                    y = next(x for x in kolonlar[dkol] if x not in eksik)
-                    kolonlar[p][kolonlar[p].index(t)] = y
-                    kolonlar[dkol][kolonlar[dkol].index(y)] = t
+                # Sığmayanlar tek bir ortak kolon üzerinden alınır: gelmeyen numara önce
+                # aynı onluktan takasla ortak kolona getirilir, sonra döngü kolonuyla onluk
+                # dışı takas edilir. Böylece döngü kolonu dışında yalnızca ortak kolonun
+                # onluk dağılımı şablondan ayrılır.
+                tasan = [t for t in sorted(eksik) if t not in kolonlar[dkol]]
+                while tasan:
+                    ihtiyac = Counter((t - 1) // 10 for t in tasan)
+
+                    def ortak_puani(i):
+                        if i == dkol:
+                            return -1
+                        return sum(min(n, sum(1 for x in kolonlar[i]
+                                              if (x - 1) // 10 == d and x not in eksik))
+                                   for d, n in ihtiyac.items())
+                    # Gerekirse birden fazla ortak kolon: her seferinde en çok alabilen seçilir.
+                    ortak = max(range(10), key=lambda i: (ortak_puani(i), rng.random()))
+                    kalan = []
+                    for t in tasan:
+                        q = next(i for i in range(10) if t in kolonlar[i])
+                        if q != ortak:
+                            z = next((x for x in kolonlar[ortak]
+                                      if (x - 1) // 10 == (t - 1) // 10 and x not in eksik), None)
+                            if z is None:
+                                kalan.append(t)
+                                continue
+                            kolonlar[q][kolonlar[q].index(t)] = z
+                            kolonlar[ortak][kolonlar[ortak].index(z)] = t
+                        y = next(x for x in kolonlar[dkol] if x not in eksik)
+                        kolonlar[ortak][kolonlar[ortak].index(t)] = y
+                        kolonlar[dkol][kolonlar[dkol].index(y)] = t
+                    if len(kalan) == len(tasan):  # hiçbir kolon alamıyor: numaranın kendi kolonu
+                        t = kalan.pop(0)
+                        q = next(i for i in range(10) if t in kolonlar[i])
+                        y = next(x for x in kolonlar[dkol] if x not in eksik)
+                        kolonlar[q][kolonlar[q].index(t)] = y
+                        kolonlar[dkol][kolonlar[dkol].index(y)] = t
+                    tasan = kalan
             elif eksik and dongu_agirlik and len(eksik) < 60:
                 # Döngü kuralı: gelmeyen numaralar baştan aynı kolonlarda toplanır. En çok
                 # gelmeyen numara alabilecek kolon önce doldurulur, sonra sıradaki.
@@ -1341,7 +1369,8 @@ def cekilis_degerlendir(cekilisler: list[dict], kupon_metni: str) -> dict:
         r.append("Evet, kemik yapıya uyuyor. Tüm kurallar modu bu dizilimde bir kolon üretebilirdi.")
     else:
         r.append("Hayır, kemik yapının dışında. Tüm kurallar modu (kemik yapı zorunlu) bu dizilimde "
-                 "bir kolon üretemezdi. Bu bir \"hata\" değil, kuralın doğası: geçmiş çekilişlerde "
+                 "bir kolon üretemezdi (döngü kolonunda kemik yapı esnetilebildiği için o kolon "
+                 "hariç). Bu bir \"hata\" değil, kuralın doğası: geçmiş çekilişlerde "
                  f"kemik yapıya uyma oranı %{100 * kemik_oran:.0f}.")
     r += ["", "## Kupon", ""]
     if kupon_var:
@@ -1544,7 +1573,7 @@ def pencere_analizi(cekilisler: list[dict]) -> dict:
         listeler.append({"bolum": bolum, "deger": deger, "adet": adet})
     for n in sorted(set(sik.values()), reverse=True):
         ekle("Numara sıklığı", " ".join(str(t) for t in SAYI_ARALIGI if sik[t] == n), n)
-    for (a, b), n in sorted(ikili.items(), key=lambda x: (-x[1], x[0]))[:20]:
+    for (a, b), n in sorted(ikili.items(), key=lambda x: (-x[1], x[0])):
         if n >= 2:
             ekle("Birlikte gelen (2+ kez)", f"{a}-{b}", n)
     for t, n in sorted(ustuste.items(), key=lambda x: (-x[1], x[0])):
@@ -1631,6 +1660,17 @@ def _dongu_kaydi(parca: list[dict], tamam: bool, tamamlayan: list[int]) -> dict:
             "eksik": [] if tamam else sorted(set(SAYI_ARALIGI) - gelen)}
 
 
+def _ileri_tamamlayan(parca: list[dict]) -> list[int]:
+    """Bloğu eskiden yeniye tarayınca 60 numarayı tamamlayan çekilişte ilk kez gelenler."""
+    gor = set()
+    for c in parca:
+        yeni = set(c["toplar"]) - gor
+        gor |= yeni
+        if len(gor) == 60:
+            return sorted(yeni)
+    return []
+
+
 def donguler(cekilisler: list[dict], capa: int = DONGU_CAPA) -> list[dict]:
     """60 numaranın hepsinin geldiği ardışık çekiliş blokları (döngüler), eskiden
     yeniye. `capa`dan önceki çekilişler geriye doğru bölünür (son döngü capa-1'de
@@ -1649,7 +1689,8 @@ def donguler(cekilisler: list[dict], capa: int = DONGU_CAPA) -> list[dict]:
             j -= 1
         if len(gor) < 60:
             break
-        sonuc.append(_dongu_kaydi(gecmis[j + 1:i + 1], True, sorted(yeni)))
+        parca = gecmis[j + 1:i + 1]
+        sonuc.append(_dongu_kaydi(parca, True, _ileri_tamamlayan(parca)))
         i = j
     sonuc.reverse()
     bas = 0

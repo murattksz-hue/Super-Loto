@@ -143,6 +143,7 @@ class PencereAnaliziTest(unittest.TestCase):
             liste.setdefault(r["bolum"], []).append((r["deger"], r["adet"]))
         self.assertEqual(liste["Numara sıklığı"][0], ("16", 9))
         self.assertEqual(set(liste["Birlikte gelen (2+ kez)"][:3]), {("40-42", 3), ("14-56", 3), ("45-54", 3)})
+        self.assertEqual(len(liste["Birlikte gelen (2+ kez)"]), 59)    # hepsi, kesilmeden
         self.assertEqual(liste["Üst üste gelen"][0], ("30", 3))
         self.assertIn(("53-54", 2), liste["Ardışık ikili"])
         self.assertEqual(liste["En uzun süredir gelmeyen"][0], ("13", 35))
@@ -160,6 +161,13 @@ class DonguTest(unittest.TestCase):
             self.assertEqual(len(numaralar), 60)
             self.assertEqual(x["uzunluk"], x["son_no"] - x["bas_no"] + 1)
         self.assertGreater(len(tam), 15)
+
+    def test_son_tamamlayan_ileriye_dogru(self):
+        # Döngü #950–#985: 60 numara #985'te 24 ile tamamlanır (13 ilk çekilişte gelen).
+        c985 = [VERI[k] for k in sorted(VERI) if k <= 985]
+        d = [x for x in sl.donguler(c985, capa=986) if x["durum"] == "tamam"]
+        self.assertEqual((d[-1]["bas_no"], d[-1]["son_no"], d[-1]["tamamlayan"]), (950, 985, [24]))
+        self.assertEqual(d[-2]["tamamlayan"], [42])                     # #911–#949, #941'de
 
     def test_ileriye_dogru_yeni_dongu(self):
         d = sl.donguler(CEKILISLER, capa=980)

@@ -64,7 +64,7 @@ Analizli kural (`--kolon`) ile taklitçi kural (`--taklitci`) birlikte uygulanı
 - **Döngü kuralı (hedef):** Döngü, 60 numaranın hepsinin geldiği ardışık çekilişlerdir. Şu anki döngüde henüz gelmeyen numaralar mümkün olduğunca aynı kolonlarda toplanır (kupondaki "Dng" sütunu: kolondaki gelmeyen numara sayısı). Fikir şu: gelmeyen numaralar gelirse, aynı kolonda toplu olmaları bir kolonda 3–4 bilme şansını artırır. 60 numaranın hepsi zaten kuponda olduğundan kural numara seçmez, yalnızca yerleşimi belirler. Yeni döngünün ilk çekilişinde 60 numaranın hepsi gelmemiş sayıldığı için etkisi yoktur.
   - **7 ya da daha fazla gelmeyen numara:** hedef olarak toplanır, zorunlu kurallar bozulmaz.
   - **6 ya da daha az gelmeyen numara:** hepsi zorunlu olarak tek bir **döngü kolonuna** konur (kuponda "← döngü kolonu"). Bunu engelleyen kurallar duruma göre, en azından başlayarak esnetilir:
-    1. Döngü kolonunun kendisi: taklit (tek, ardışık, son hane, toplam), kemik yapı ve farklı düzen o kolon için zorunlu değil, hedef olur. Gelmeyenler o kolonun onluk şablonuna sığmazsa bir başka kolonla onluk dışı takas yapılır.
+    1. Döngü kolonunun kendisi: taklit (tek, ardışık, son hane, toplam), kemik yapı ve farklı düzen o kolon için zorunlu değil, hedef olur. Gelmeyenler o kolonun onluk şablonuna sığmazsa bir ortak kolonla onluk dışı takas yapılır; yalnızca o kolonun onluk dağılımı şablondan ayrılır (aynı onluktan çok numara kaldığında, örneğin 1–6, birden fazla ortak kolon gerekebilir).
     2. Yetmezse diğer kolonlarda tek ve son hane ±1.
     3. Yetmezse tek, son hane ve ardışık ±1, toplam aralığı iki kat.
     4. En son diğer kolonlarda taklitçi kural bırakılır.

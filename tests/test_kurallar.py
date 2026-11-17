@@ -104,7 +104,7 @@ class KolonUretTest(unittest.TestCase):
         self.assertIn("Dng", out.getvalue())
         self.assertIn("Döngü kuralı", out.getvalue())
 
-    def esnek_kontrol(self, an, eksik):
+    def esnek_kontrol(self, an, eksik, en_cok_ayrilan=1):
         an["dongu_eksik"] = set(eksik)
         sonuc = sl.taklit_uret(CEKILISLER, 4, an=an, adim=50000, deneme=2)
         self.kontrol_60(sonuc["kolonlar"])
@@ -118,6 +118,10 @@ class KolonUretTest(unittest.TestCase):
             # Gerekirse kademeli esnetilen taklit; kemik yapı her zaman zorunlu.
             self.assertEqual(sl.taklit_zorunlu(k, h, son, 6, sonuc["esneklik"]), 0)
             self.assertEqual(sl.kemik_ceza(k, set(son)), 0)
+        # Onluk dağılımı şablondan ayrılan, döngü kolonu dışında en fazla bir kolon olabilir.
+        ayrilan = [i for i, (k, h) in enumerate(zip(sonuc["kolonlar"], sonuc["hedefler"]))
+                   if i != d and sl.dizilim(k)["onlu"] != h["onlu"]]
+        self.assertLessEqual(len(ayrilan), en_cok_ayrilan, ayrilan)
         out = io.StringIO()
         with redirect_stdout(out):
             sl.taklit_yazdir(sonuc, "Set 1", an)
@@ -134,6 +138,9 @@ class KolonUretTest(unittest.TestCase):
         an = sl.numara_analizi(CEKILISLER)
         self.esnek_kontrol(an, [21, 22, 23, 24])
         self.esnek_kontrol(an, [3, 13, 23, 33, 43, 53])                       # aynı son hane
+        # Altısı da aynı onlukta: hiçbir kolon bir onluktan 4 numara veremediği için
+        # birden fazla ortak kolon gerekir.
+        self.esnek_kontrol(an, [1, 2, 3, 4, 5, 6], en_cok_ayrilan=3)
 
     def test_cok_eksikte_dongu_kolonu_yok(self):
         an = sl.numara_analizi(CEKILISLER)
