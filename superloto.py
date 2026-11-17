@@ -1192,13 +1192,20 @@ def oyun_planla(cekilisler: list[dict]) -> None:
     print(plan)
 
 
-def oyun_jupiter(cekilisler: list[dict], simdi: datetime.datetime) -> None:
+UYKU = time.sleep  # testlerde değiştirilir
+
+
+def oyun_jupiter(cekilisler: list[dict], simdi: datetime.datetime, bekle: int = 0) -> None:
     """Çekiliş günü Jüpiter saatinde kolonları üretir (gün içinde sık çalıştırılır).
 
     Kolonlar günün ilk Jüpiter saatinde üretilir. O saat kaçırıldıysa (ör.
     zamanlanmış iş gecikti) bir sonraki Jüpiter saati beklenir; satıştan önce
     başka Jüpiter saati kalmadıysa hemen üretilir. Bugün için zaten
     üretildiyse hiçbir şey yapılmaz.
+
+    `bekle` saniye verilirse ve Jüpiter saati en geç o kadar sonra başlıyorsa,
+    saat gelene kadar beklenir ve kolonlar Jüpiter saatinde üretilir (GitHub
+    zamanlanmış işleri geciktirebildiği için iş Jüpiter saatinden önce başlar).
     """
     gun = simdi.date()
     if gun.weekday() not in CEKILIS_GUNLERI:
@@ -1215,8 +1222,15 @@ def oyun_jupiter(cekilisler: list[dict], simdi: datetime.datetime) -> None:
     simdiki = next((s for s in jup if s["bas"] <= simdi < s["bit"]), None)
     sonraki = next((s for s in jup if s["bas"] > simdi), None)
     if simdiki is None and sonraki is not None:
-        print(f"{gun}: Jüpiter saati bekleniyor ({sonraki['bas']:%H:%M}–{sonraki['bit']:%H:%M}).")
-        return
+        kalan = (sonraki["bas"] - simdi).total_seconds()
+        if not bekle or kalan > bekle:
+            print(f"{gun}: Jüpiter saati bekleniyor ({sonraki['bas']:%H:%M}–{sonraki['bit']:%H:%M}).")
+            return
+        print(f"{gun}: Jüpiter saati {sonraki['bas']:%H:%M}'de başlıyor; {kalan / 60:.0f} dakika "
+              "bekleniyor.", flush=True)
+        UYKU(kalan + 5)  # saat başladıktan birkaç saniye sonra
+        simdi = sonraki["bas"]
+        simdiki = sonraki
     if simdiki is not None:
         not_ = (f"Jüpiter saati {simdiki['bas']:%H:%M}–{simdiki['bit']:%H:%M} içinde üretildi, "
                 f"üretim saati {simdi:%H:%M}.")
@@ -1929,6 +1943,9 @@ def main() -> None:
                    help="oyun_kolonlari.txt: 'planla' sonraki çekiliş gününü hazırlar, "
                         "'jupiter' çekiliş günü Jüpiter saatindeyse kolonları üretir")
     p.add_argument("--simdi", help="--oyun jupiter için zamanı belirle (YYYY-AA-GGTSS:DD), test için")
+    p.add_argument("--bekle", type=int, default=0, metavar="SANIYE",
+                   help="--oyun jupiter: Jüpiter saati en geç bu kadar saniye sonra başlıyorsa "
+                        "bekleyip o saatte üret")
     p.add_argument("--hepsi", action="store_true",
                    help="tüm kurallar: taklitçi kural + kemik yapı + farklı düzen + döngü kuralı birlikte")
     p.add_argument("--taklit-oran", type=int, default=7,
@@ -1965,7 +1982,7 @@ def main() -> None:
         simdi = (datetime.datetime.fromisoformat(a.simdi) if a.simdi else
                  datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=ANKARA[2])))
                  .replace(tzinfo=None))
-        oyun_jupiter(cekilisler, simdi)
+        oyun_jupiter(cekilisler, simdi, a.bekle)
         return
     if a.hepsi:
         a.taklitci = True

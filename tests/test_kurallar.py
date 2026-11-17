@@ -194,6 +194,29 @@ class JupiterUretimTest(unittest.TestCase):
             sl.oyun_jupiter(CEKILISLER, datetime.datetime.fromisoformat(zaman))
         return cikti.getvalue()
 
+    def test_jupiter_saatini_bekler(self):
+        # GitHub zamanlanmış işleri geciktirebilir: iş, Jüpiter saati yaklaşınca başlar
+        # ve saat gelene kadar bekleyip kuponu Jüpiter saatinde üretir.
+        uykular = []
+        eski = sl.UYKU
+        sl.UYKU = uykular.append
+        try:
+            with redirect_stdout(io.StringIO()):
+                sl.oyun_planla(CEKILISLER)
+                sl.oyun_jupiter(CEKILISLER, datetime.datetime.fromisoformat("2026-11-15T10:30"),
+                                bekle=600)                  # 72 dk var: beklemez
+            self.assertEqual(uykular, [])
+            self.assertIn("üretilecek", sl.OYUN_PATH.read_text(encoding="utf-8"))
+            with redirect_stdout(io.StringIO()):
+                sl.oyun_jupiter(CEKILISLER, datetime.datetime.fromisoformat("2026-11-15T11:00"),
+                                bekle=7200)                 # 42 dk sonra Jüpiter: bekler
+            self.assertEqual(len(uykular), 1)
+            self.assertTrue(42 * 60 <= uykular[0] <= 44 * 60, uykular)   # saniyeli başlangıç + 30 sn pay
+            metin = sl.OYUN_PATH.read_text(encoding="utf-8")
+            self.assertIn("Jüpiter saati 11:42–12:32 içinde üretildi, üretim saati 11:42", metin)
+        finally:
+            sl.UYKU = eski
+
     def test_akis(self):
         with redirect_stdout(io.StringIO()):
             sl.oyun_planla(CEKILISLER)
