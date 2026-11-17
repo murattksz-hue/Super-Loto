@@ -88,7 +88,7 @@ Geleneksel (Kalde) sisteme göre Ankara için gezegen saatlerini hesaplar (39,93
 
 - Her çekilişten sonraki sabah (`superloto.yml`), sonraki çekiliş günü hazırlanır (`--oyun planla`). `oyun_kolonlari.txt` dosyasına o günün gezegen saatleri ve kolonların hangi Jüpiter saatinde üretileceği yazılır.
 - Çekiliş günü (`jupiter.yml`), 07:07–20:07 arasında saatte bir `--oyun jupiter --bekle 7200` çalışır. Script Ankara'da günün ilk Jüpiter saatinin içindeyse tüm kurallarla (`--hepsi`) 10 kolonu üretir ve dosyaya üretim saatiyle birlikte yazar. Jüpiter saati en geç 2 saat sonra başlayacaksa saat gelene kadar bekler ve kolonları Jüpiter saatinde üretir. GitHub zamanlanmış işleri geciktirebildiği (10 dakikalık iş bazen saatte bir çalışıyor) için bu bekleme, Jüpiter saatinin kaçırılmasını önler.
-- İlk Jüpiter saati kaçırılırsa (ör. GitHub'ın zamanlanmış işi gecikirse) bir sonraki Jüpiter saati beklenir. Satıştan önce başka Jüpiter saati kalmadıysa kolonlar hemen üretilir. Bu durumlar dosyada not edilir.
+- İlk Jüpiter saati kaçırılırsa (ör. GitHub'ın zamanlanmış işi gecikirse) satış kapanana kadar (21:00) günün diğer Jüpiter saatleri denenir. Jüpiter saati kalmadıysa Venüs saati (küçük talih) beklenir; ilkbahar ve yaz Perşembeleri gibi son Jüpiter saatinden sonra Venüs saati gelen günlerde işe yarar. O da kalmadıysa kolonlar satış kapanmadan hemen üretilir. Bu durumlar dosyada not edilir.
 - Bir gün için kolonlar bir kez üretilir; sonraki çalıştırmalar dosyaya dokunmaz.
 - GitHub zamanlanmış işleri birkaç dakika, yoğun zamanlarda daha uzun gecikebilir.
 

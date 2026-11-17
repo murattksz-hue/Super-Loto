@@ -1169,11 +1169,16 @@ def kolonlar_uretildi_mi(gun: datetime.date) -> bool:
                for satir in metin.splitlines())
 
 
-def jupiter_saatleri(gun: datetime.date) -> list[dict]:
-    """Satış kapanmadan önce başlayan Jüpiter saatleri (bitiş en geç kapanış)."""
+def satis_saatleri(gun: datetime.date, gezegen: str) -> list[dict]:
+    """Satış kapanmadan önce başlayan, verilen gezegenin saatleri (bitiş en geç kapanış)."""
     kapanis = datetime.datetime.combine(gun, SATIS_KAPANIS)
     return [dict(s, bit=min(s["bit"], kapanis)) for s in gezegen_saatleri(gun)
-            if s["gezegen"] == "Jüpiter" and s["bas"] < kapanis]
+            if s["gezegen"] == gezegen and s["bas"] < kapanis]
+
+
+def jupiter_saatleri(gun: datetime.date) -> list[dict]:
+    """Satış kapanmadan önce başlayan Jüpiter saatleri (bitiş en geç kapanış)."""
+    return satis_saatleri(gun, "Jüpiter")
 
 
 def oyun_planla(cekilisler: list[dict]) -> None:
@@ -1199,9 +1204,9 @@ def oyun_jupiter(cekilisler: list[dict], simdi: datetime.datetime, bekle: int = 
     """Çekiliş günü Jüpiter saatinde kolonları üretir (gün içinde sık çalıştırılır).
 
     Kolonlar günün ilk Jüpiter saatinde üretilir. O saat kaçırıldıysa (ör.
-    zamanlanmış iş gecikti) bir sonraki Jüpiter saati beklenir; satıştan önce
-    başka Jüpiter saati kalmadıysa hemen üretilir. Bugün için zaten
-    üretildiyse hiçbir şey yapılmaz.
+    zamanlanmış iş gecikti) satış kapanana kadar sonraki Jüpiter saatleri
+    denenir; Jüpiter saati kalmadıysa Venüs saatleri; o da kalmadıysa hemen
+    üretilir. Bugün için zaten üretildiyse hiçbir şey yapılmaz.
 
     `bekle` saniye verilirse ve Jüpiter saati en geç o kadar sonra başlıyorsa,
     saat gelene kadar beklenir ve kolonlar Jüpiter saatinde üretilir (GitHub
@@ -1219,25 +1224,34 @@ def oyun_jupiter(cekilisler: list[dict], simdi: datetime.datetime, bekle: int = 
         print(f"{gun}: satış kapandı, kolon üretilmedi.")
         return
     jup = jupiter_saatleri(gun)
-    simdiki = next((s for s in jup if s["bas"] <= simdi < s["bit"]), None)
-    sonraki = next((s for s in jup if s["bas"] > simdi), None)
+    # Önce günün bütün Jüpiter saatleri denenir; hiçbiri kalmadıysa Venüs saatleri;
+    # o da kalmadıysa satış kapanmadan hemen üretilir.
+    saatler, gezegen = jup, "Jüpiter"
+    if not any(s["bit"] > simdi for s in jup):
+        saatler, gezegen = satis_saatleri(gun, "Venüs"), "Venüs"
+    simdiki = next((s for s in saatler if s["bas"] <= simdi < s["bit"]), None)
+    sonraki = next((s for s in saatler if s["bas"] > simdi), None)
     if simdiki is None and sonraki is not None:
         kalan = (sonraki["bas"] - simdi).total_seconds()
         if not bekle or kalan > bekle:
-            print(f"{gun}: Jüpiter saati bekleniyor ({sonraki['bas']:%H:%M}–{sonraki['bit']:%H:%M}).")
+            print(f"{gun}: {gezegen} saati bekleniyor "
+                  f"({sonraki['bas']:%H:%M}–{sonraki['bit']:%H:%M}).")
             return
-        print(f"{gun}: Jüpiter saati {sonraki['bas']:%H:%M}'de başlıyor; {kalan / 60:.0f} dakika "
+        print(f"{gun}: {gezegen} saati {sonraki['bas']:%H:%M}'de başlıyor; {kalan / 60:.0f} dakika "
               "bekleniyor.", flush=True)
         UYKU(kalan + 5)  # saat başladıktan birkaç saniye sonra
         simdi = sonraki["bas"]
         simdiki = sonraki
-    if simdiki is not None:
+    if simdiki is not None and gezegen == "Jüpiter":
         not_ = (f"Jüpiter saati {simdiki['bas']:%H:%M}–{simdiki['bit']:%H:%M} içinde üretildi, "
                 f"üretim saati {simdi:%H:%M}.")
-        if jup and simdiki is not jup[0]:
+        if simdiki is not jup[0]:
             not_ += f" (İlk Jüpiter saati {jup[0]['bas']:%H:%M} kaçırıldı.)"
+    elif simdiki is not None:
+        not_ = (f"Jüpiter saatleri kaçırıldı; Venüs saati {simdiki['bas']:%H:%M}–"
+                f"{simdiki['bit']:%H:%M} içinde üretildi, üretim saati {simdi:%H:%M}.")
     else:
-        not_ = (f"satıştan önce Jüpiter saati kalmadığı için hemen üretildi, "
+        not_ = (f"satıştan önce Jüpiter ve Venüs saati kalmadığı için hemen üretildi, "
                 f"üretim saati {simdi:%H:%M}.")
     an = numara_analizi(cekilisler)
     tohum = int(simdi.strftime("%Y%m%d%H%M"))

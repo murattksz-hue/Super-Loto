@@ -234,6 +234,38 @@ class JupiterUretimTest(unittest.TestCase):
         self.assertIn("bekleniyor (17:32", self.calistir("2026-11-15T13:00"))
         self.assertIn("kaçırıldı", self.calistir("2026-11-15T17:40"))
 
+    def test_juptier_kalmadiysa_venus(self):
+        # 25 Mart 2027 Perşembe: Jüpiter 06:44 ve 13:56, Venüs 09:49 ve 17:01 (satış 21:00).
+        self.assertIn("Jüpiter saati bekleniyor (13:56", self.calistir("2027-03-25T11:00"))
+        self.assertFalse(sl.OYUN_PATH.exists())        # Venüs saatindeyken bile Jüpiter beklenir
+        self.assertIn("Venüs saati bekleniyor (17:01", self.calistir("2027-03-25T15:30"))
+        cikti = self.calistir("2027-03-25T17:20")
+        self.assertIn("üretildi", cikti)
+        metin = sl.OYUN_PATH.read_text(encoding="utf-8")
+        self.assertIn("Jüpiter saatleri kaçırıldı; Venüs saati 17:01–18:03 içinde üretildi, "
+                      "üretim saati 17:20", metin)
+        self.assertIn("zaten üretilmiş", self.calistir("2027-03-25T17:40"))
+
+    def test_hicbiri_kalmadiysa_hemen(self):
+        cikti = self.calistir("2027-03-25T19:00")
+        self.assertIn("üretildi", cikti)
+        self.assertIn("satıştan önce Jüpiter ve Venüs saati kalmadığı için hemen üretildi",
+                      sl.OYUN_PATH.read_text(encoding="utf-8"))
+
+    def test_venus_saatini_bekler(self):
+        uykular = []
+        eski = sl.UYKU
+        sl.UYKU = uykular.append
+        try:
+            with redirect_stdout(io.StringIO()):
+                sl.oyun_jupiter(CEKILISLER, datetime.datetime.fromisoformat("2027-03-25T16:00"),
+                                bekle=7200)
+            self.assertEqual(len(uykular), 1)
+            self.assertIn("Venüs saati 17:01–18:03 içinde üretildi, üretim saati 17:01",
+                          sl.OYUN_PATH.read_text(encoding="utf-8"))
+        finally:
+            sl.UYKU = eski
+
     def test_cekilis_olmayan_gun(self):
         self.assertIn("çekiliş günü değil", self.calistir("2026-11-16T12:00"))
         self.assertFalse(sl.OYUN_PATH.exists())
