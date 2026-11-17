@@ -360,7 +360,8 @@ def numara_analizi(cekilisler: list[dict]) -> dict:
             son_gorulme[t] = i
     gecikme = sorted(SAYI_ARALIGI, key=lambda t: (son_gorulme.get(t, -1), t))[:10]
     ikili = Counter(p for c in cekilisler for p in combinations(c["toplar"], 2))
-    return {"son": set(son["toplar"]), "seviye": seviye, "puan": puan,
+    return {"son": set(son["toplar"]), "dongu_eksik": set(donguler(cekilisler)[-1]["eksik"]),
+            "seviye": seviye, "puan": puan,
             "gecikme": set(gecikme), "ikili": ikili, "olcutler": list(olcutler),
             "sonraki_gun": GUNLER[sonraki_gun], "sonraki_tarih": sonraki.isoformat()}
 
@@ -408,6 +409,17 @@ def kolon_ceza(kolon: list[int], an: dict) -> int:
     """Kolonun kurallardan ne kadar saptığı (0 = bütün kurallara uyuyor):
     kemik yapı + güç dengesi + uzun süredir çıkmayanların dağılımı."""
     return kemik_ceza(kolon, an["son"]) + dagilim_ceza(kolon, an)
+
+
+# Döngü kuralı: şu anki döngüde henüz gelmeyen numaralar tüm kurallar modunda
+# mümkün olduğunca aynı kolonlarda toplanır (hedef; zorunlu kurallar bozulmaz).
+DONGU_AGIRLIK = 60.0  # tam toplanmanın toplam ödülü (hedef puanı cinsinden)
+
+
+def dongu_toplanma(kolon: list[int], eksik: set[int]) -> int:
+    """Kolondaki gelmeyen numaraların oluşturduğu ikili sayısı (toplanma puanı)."""
+    e = len(eksik & set(kolon))
+    return e * (e - 1) // 2
 
 
 def ikili_puani(kolon: list[int], an: dict) -> int:
@@ -680,7 +692,8 @@ def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
                 onceki: list[list[int]] | None = None,
                 haric_sablon: set[int] = frozenset(), son_yil_adet: int = 7,
                 tolerans: int = 6, adim: int = 80000, deneme: int = 3,
-                sablon_denemesi: int = 8, an: dict | None = None) -> dict:
+                sablon_denemesi: int = 8, an: dict | None = None,
+                dongu_agirlik: float = DONGU_AGIRLIK) -> dict:
     """Taklitçi kural: her kolon gerçek bir çekilişin dizilimini taklit eder.
 
     Zorunlu (her kolonda kesin): onlu dağılım, tek, ardışık ikili, aynı son
@@ -720,34 +733,89 @@ def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
                 z += kemik_ceza(kolon, an["son"])
             return z
 
+        eksik = an.get("dongu_eksik", set()) if an is not None else set()
+        # Toplanma puanı, gelmeyen numara sayısına göre olası en yüksek değere bölünür:
+        # 2 de kalsa 20 de kalsa tam toplanma aynı ödülü (dongu_agirlik) alır.
+        en_cok = (len(eksik) // 6) * 15 + math.comb(len(eksik) % 6, 2) if eksik else 0
+        birim = dongu_agirlik / en_cok if en_cok and len(eksik) < 60 else 0.0
+
         def hedef(i, kolon):
             _, h, _ = taklit_kontrol(kolon, hedefler[i], son["toplar"], tolerans)
+            if birim:
+                # Döngü kuralı: gelmeyen numaralar aynı kolonda toplandıkça ceza azalır.
+                h -= birim * dongu_toplanma(kolon, eksik)
             return h
+
+        # Döngü kuralı devredeyken çift takasa da izin verilir: gelmeyen bir numarayı
+        # başka kolona taşımak çoğu zaman tek/çift dengesini bozar; ikinci takas düzeltir.
+        cift_takas = bool(eksik and dongu_agirlik and len(eksik) < 60)
 
         def takas_dene(kolonlar):
             a, b = rng.sample(range(10), 2)
-            i = rng.randrange(6)
-            d = (kolonlar[a][i] - 1) // 10
-            secenek = [j for j, t in enumerate(kolonlar[b]) if (t - 1) // 10 == d]
-            if not secenek:
+            ciftler = []
+            for _ in range(2 if cift_takas and rng.random() < 0.5 else 1):
+                kullanilan_i = {x for x, _ in ciftler}
+                kullanilan_j = {y for _, y in ciftler}
+                i = rng.choice([x for x in range(6) if x not in kullanilan_i])
+                d = (kolonlar[a][i] - 1) // 10
+                secenek = [j for j, t in enumerate(kolonlar[b])
+                           if (t - 1) // 10 == d and j not in kullanilan_j]
+                if not secenek:
+                    break
+                # Yalnızca aynı onluktan numaralar takas edilir: onlu dağılım korunur.
+                ciftler.append((i, rng.choice(secenek)))
+            if not ciftler:
                 return None
-            # Yalnızca aynı onluktan numaralar takas edilir: onlu dağılım korunur.
-            j = rng.choice(secenek)
-            kolonlar[a][i], kolonlar[b][j] = kolonlar[b][j], kolonlar[a][i]
-            return a, b, i, j
+            for i, j in ciftler:
+                kolonlar[a][i], kolonlar[b][j] = kolonlar[b][j], kolonlar[a][i]
+            return a, b, ciftler
+
+        def geri_al(t):
+            a, b, ciftler = t
+            for i, j in ciftler:
+                kolonlar[a][i], kolonlar[b][j] = kolonlar[b][j], kolonlar[a][i]
 
         kolonlar: list[list[int]] = [[] for _ in range(10)]
+        havuz = []
         for d in range(6):
             numaralar = list(range(d * 10 + 1, d * 10 + 11))
             rng.shuffle(numaralar)
+            havuz.append(numaralar)
+        if eksik and dongu_agirlik and len(eksik) < 60:
+            # Döngü kuralı: gelmeyen numaralar baştan aynı kolonlarda toplanır. En çok
+            # gelmeyen numara alabilecek kolon önce doldurulur, sonra sıradaki.
+            kalan_eksik = [[t for t in havuz[d] if t in eksik] for d in range(6)]
+            bos = [list(h["onlu"]) for h in hedefler]
+            while any(kalan_eksik):
+                def kapasite(i):
+                    return sum(min(bos[i][d], len(kalan_eksik[d])) for d in range(6))
+                en = max(range(10), key=lambda i: (kapasite(i), rng.random()))
+                if not kapasite(en):
+                    break
+                for d in range(6):
+                    while bos[en][d] and kalan_eksik[d]:
+                        t = kalan_eksik[d].pop()
+                        havuz[d].remove(t)
+                        kolonlar[en].append(t)
+                        bos[en][d] -= 1
             for i, h in enumerate(hedefler):
-                for _ in range(h["onlu"][d]):
-                    kolonlar[i].append(numaralar.pop())
+                for d in range(6):
+                    for _ in range(bos[i][d]):
+                        kolonlar[i].append(havuz[d].pop())
+        else:
+            for d in range(6):
+                for i, h in enumerate(hedefler):
+                    for _ in range(h["onlu"][d]):
+                        kolonlar[i].append(havuz[d].pop())
 
         # 1. aşama: zorunlu kurallar. Taklitçi modunda hedefler de birlikte izlenir;
         # tüm kurallar modunda hedefler yalnızca 2. aşamada iyileştirilir.
         def ceza(i, k):
-            return 100 * zorunlu(i, k) + (hedef(i, k) if an is None else 0)
+            if an is None:
+                return 100 * zorunlu(i, k) + hedef(i, k)
+            # Tüm kurallar: önce zorunlular; döngü kuralının toplanması korunmaya çalışılır.
+            # 1. aşamada toplanma, zorunlu kuralların hemen altında bir öncelikle korunur.
+            return 100 * zorunlu(i, k) - (90 / en_cok * dongu_toplanma(k, eksik) if birim else 0)
         cezalar = [ceza(i, k) for i, k in enumerate(kolonlar)]
         zor = [zorunlu(i, k) for i, k in enumerate(kolonlar)]
         for adim_no in range(adim):
@@ -757,14 +825,14 @@ def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
             t = takas_dene(kolonlar)
             if t is None:
                 continue
-            a, b, i, j = t
+            a, b = t[0], t[1]
             ya, yb = ceza(a, kolonlar[a]), ceza(b, kolonlar[b])
             fark = ya + yb - cezalar[a] - cezalar[b]
             if fark <= 0 or rng.random() < math.exp(-fark / sicaklik):
                 cezalar[a], cezalar[b] = ya, yb
                 zor[a], zor[b] = zorunlu(a, kolonlar[a]), zorunlu(b, kolonlar[b])
             else:
-                kolonlar[a][i], kolonlar[b][j] = kolonlar[b][j], kolonlar[a][i]
+                geri_al(t)
         if any(zorunlu(i, k) for i, k in enumerate(kolonlar)):
             continue
 
@@ -776,16 +844,16 @@ def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
                 t = takas_dene(kolonlar)
                 if t is None:
                     continue
-                a, b, i, j = t
+                a, b = t[0], t[1]
                 if zorunlu(a, kolonlar[a]) or zorunlu(b, kolonlar[b]):
-                    kolonlar[a][i], kolonlar[b][j] = kolonlar[b][j], kolonlar[a][i]
+                    geri_al(t)
                     continue
                 pa, pb = hedef(a, kolonlar[a]), hedef(b, kolonlar[b])
                 fark = pa + pb - puan[a] - puan[b]
                 if fark <= 0 or rng.random() < math.exp(-fark / sicaklik):
                     puan[a], puan[b] = pa, pb
                 else:
-                    kolonlar[a][i], kolonlar[b][j] = kolonlar[b][j], kolonlar[a][i]
+                    geri_al(t)
 
         toplam = sum(hedef(i, k) for i, k in enumerate(kolonlar))
         if en_iyi is None or toplam < en_iyi[0]:
@@ -804,7 +872,9 @@ def taklit_uret(cekilisler: list[dict], tohum: int | None = None,
 def taklit_yazdir(sonuc: dict, baslik: str, an: dict | None = None) -> None:
     print(baslik)
     print(f"  Şablon seçimi: {sonuc['seviye']}.")
-    print(f"  {'#':>2}  {'Kolon':<29}{'Tek':>4}{'Asal':>5}{'Tkr':>4}{'Top':>5}{'Uyum':>6}   "
+    eksik = an.get("dongu_eksik", set()) if an else set()
+    ek = f"{'Dng':>5}" if an else ""
+    print(f"  {'#':>2}  {'Kolon':<29}{'Tek':>4}{'Asal':>5}{'Tkr':>4}{'Top':>5}{ek}{'Uyum':>6}   "
           f"Taklit edilen çekiliş")
     toplam_tutan = 0
     hedef_sayisi = 5
@@ -820,10 +890,24 @@ def taklit_yazdir(sonuc: dict, baslik: str, an: dict | None = None) -> None:
         sablon = " - ".join(f"{t:2d}" for t in s["toplar"])
         print(f"  {i:>2}  {' - '.join(f'{t:2d}' for t in k):<29}"
               f"{d['tek']:>4}{d['asal']:>5}{d['tekrar']:>4}{d['toplam']:>5}"
-              f"{f'{tutan}/{hedef_sayisi}':>6}   "
+              + (f"{len(eksik & set(k)):>5}" if an else "")
+              + f"{f'{tutan}/{hedef_sayisi}':>6}   "
               f"#{s['no']} {s['tarih']} {GUNLER[tarih.weekday()][:3]}: {sablon}")
     ad = "asal, son çekilişten tekrar, ilk top, son top, aralık deseni"
     print(f"  Hedef uyumu: {toplam_tutan}/{10 * hedef_sayisi} ({ad})")
+    if an:
+        if len(eksik) == 60:
+            print("  Döngü kuralı: yeni döngünün ilk çekilişi; 60 numaranın hepsi henüz gelmemiş "
+                  "sayılır, toplama yapılmaz (Dng = kolondaki gelmeyen numara).")
+        elif eksik:
+            dagilim = sorted((len(eksik & set(k)) for k in sonuc["kolonlar"]), reverse=True)
+            if len(eksik) > 30:
+                gelen = sorted(set(SAYI_ARALIGI) - eksik)
+                hangi = f"bu döngüde gelen {len(gelen)} numara ({' '.join(map(str, gelen))}) dışındaki"
+            else:
+                hangi = f"bu döngüde henüz gelmeyen ({' '.join(map(str, sorted(eksik)))})"
+            print(f"  Döngü kuralı: {hangi} {len(eksik)} numara aynı kolonlarda toplandı; "
+                  f"kolonlara dağılımı {'/'.join(map(str, dagilim))} (Dng sütunu).")
     kullanilan = sorted(t for k in sonuc["kolonlar"] for t in k)
     assert kullanilan == list(SAYI_ARALIGI), "her numara tam bir kez kullanılmalı"
 
@@ -840,6 +924,8 @@ def hepsi_aciklama(son_yil_adet: int, tolerans: int) -> None:
     print("    farklı düzen: önceki kolonların her biriyle en fazla 2 ortak numara")
     print("  - Hedef (olabildiğince yakın, Uyum sütununda): asal adedi, son çekilişten tekrar,")
     print("    ilk ve son top ±3, aralık deseni ±2.")
+    print("  - Döngü kuralı (hedef): 60 numaranın tamamlandığı döngüde henüz gelmeyen numaralar")
+    print("    mümkün olduğunca aynı kolonlarda toplanır (Dng sütunu).")
     print("  - Güç dengesi, uzun süredir çıkmayanlar ve birlikte çıkanlar kullanılmaz: geçmiş")
     print("    karşılaştırmasında gerçek çekilişlerde rastgele numaralardan farksız çıktılar.")
     print("  - 60 numaranın hepsi tam bir kez kullanılır. Her yeni çekilişle kendini günceller.")
@@ -1492,8 +1578,9 @@ def dongu_karnesi_metni(cekilisler: list[dict], d: list[dict]) -> str:
     tum = [x["uzunluk"] for x in tam]
     ort_yakin = sum(yakin) / len(yakin) if yakin else None
     ort_tum = sum(tum) / len(tum)
-    r = ["", "## Döngü karnesi", "",
-         "Döngü: 60 numaranın hepsinin geldiği ardışık çekilişler. Kural değil, yalnızca izlenir.", ""]
+    r = ["", "## Döngü kuralı", "",
+         "Döngü: 60 numaranın hepsinin geldiği ardışık çekilişler. Döngü kuralı: tüm kurallar "
+         "modunda bu döngüde henüz gelmeyen numaralar mümkün olduğunca aynı kolonlarda toplanır.", ""]
     if simdi["uzunluk"]:
         r.append(f"**Şu anki döngü:** #{simdi['bas_no']}'dan beri {simdi['uzunluk']} çekiliş, "
                  f"60 numaranın {simdi['gelen']} tanesi geldi.")
@@ -1647,7 +1734,7 @@ def main() -> None:
                         "'jupiter' çekiliş günü Jüpiter saatindeyse kolonları üretir")
     p.add_argument("--simdi", help="--oyun jupiter için zamanı belirle (YYYY-AA-GGTSS:DD), test için")
     p.add_argument("--hepsi", action="store_true",
-                   help="tüm kurallar: taklitçi kural + kemik yapı + farklı düzen birlikte")
+                   help="tüm kurallar: taklitçi kural + kemik yapı + farklı düzen + döngü kuralı birlikte")
     p.add_argument("--taklit-oran", type=int, default=7,
                    help="--taklitci: 10 şablondan kaçının son 1 yıldan seçileceği (0-10, varsayılan 7)")
     p.add_argument("--tolerans", type=int, default=6,

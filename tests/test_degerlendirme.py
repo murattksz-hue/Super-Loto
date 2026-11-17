@@ -88,7 +88,7 @@ class DegerlendirmeTest(unittest.TestCase):
                 ikili = sl.IKILI_KARNESI_PATH.read_text(encoding="utf-8").splitlines()
                 self.assertEqual(ikili[0], "ikili,tum,bu_yil,son_gelis,beklenen_tum,yil")
                 self.assertTrue(ikili[1].startswith("6-43,19,"))
-                self.assertIn("Döngü karnesi", metin)
+                self.assertIn("Döngü kuralı", metin)
                 dongu = sl.DONGU_KARNESI_PATH.read_text(encoding="utf-8").splitlines()
                 self.assertTrue(dongu[0].startswith("sira,bas_no,bas_tarih"))
             finally:

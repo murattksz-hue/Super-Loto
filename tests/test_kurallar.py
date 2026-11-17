@@ -81,6 +81,33 @@ class KolonUretTest(unittest.TestCase):
             sl.taklit_yazdir(sonuc, "Set 1", an)
         self.assertNotIn("G/O/Z", out.getvalue())                     # sadeleştirilen hedefler
 
+    def test_dongu_kurali_eksikleri_toplar(self):
+        an = sl.numara_analizi(CEKILISLER)
+        # #965'ten beri süren bir döngü: 20 çekiliş, bir kısmı henüz gelmemiş numaralar.
+        an["dongu_eksik"] = set(sl.donguler(CEKILISLER, capa=965)[-1]["eksik"])
+        self.assertTrue(0 < len(an["dongu_eksik"]) < 60)
+
+        def toplanma(kolonlar):
+            return sum(sl.dongu_toplanma(k, an["dongu_eksik"]) for k in kolonlar)
+
+        kurallı = sl.taklit_uret(CEKILISLER, 4, an=an, adim=50000, deneme=2)
+        kuralsiz = sl.taklit_uret(CEKILISLER, 4, an=an, adim=50000, deneme=2, dongu_agirlik=0)
+        self.kontrol_60(kurallı["kolonlar"])
+        son = CEKILISLER[-1]["toplar"]
+        for k, h in zip(kurallı["kolonlar"], kurallı["hedefler"]):
+            self.assertEqual(sl.taklit_kontrol(k, h, son)[0], 0)      # zorunlu kurallar korunur
+            self.assertEqual(sl.kemik_ceza(k, set(son)), 0)
+        self.assertGreater(toplanma(kurallı["kolonlar"]), toplanma(kuralsiz["kolonlar"]))
+        out = io.StringIO()
+        with redirect_stdout(out):
+            sl.taklit_yazdir(kurallı, "Set 1", an)
+        self.assertIn("Dng", out.getvalue())
+        self.assertIn("Döngü kuralı", out.getvalue())
+
+    def test_dongu_eksik_analizde(self):
+        an = sl.numara_analizi(CEKILISLER)
+        self.assertEqual(an["dongu_eksik"], set(sl.donguler(CEKILISLER)[-1]["eksik"]))
+
     def test_tohum_tekrarlanabilir(self):
         a = sl.taklit_uret(CEKILISLER, 7)["kolonlar"]
         b = sl.taklit_uret(CEKILISLER, 7)["kolonlar"]
