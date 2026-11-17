@@ -1228,8 +1228,8 @@ def oyun_jupiter(cekilisler: list[dict], simdi: datetime.datetime, bekle: int = 
             return
         print(f"{gun}: Jüpiter saati {sonraki['bas']:%H:%M}'de başlıyor; {kalan / 60:.0f} dakika "
               "bekleniyor.", flush=True)
-        UYKU(kalan + 30)
-        simdi = sonraki["bas"] + datetime.timedelta(seconds=30)
+        UYKU(kalan + 5)  # saat başladıktan birkaç saniye sonra
+        simdi = sonraki["bas"]
         simdiki = sonraki
     if simdiki is not None:
         not_ = (f"Jüpiter saati {simdiki['bas']:%H:%M}–{simdiki['bit']:%H:%M} içinde üretildi, "

@@ -211,7 +211,7 @@ class JupiterUretimTest(unittest.TestCase):
                 sl.oyun_jupiter(CEKILISLER, datetime.datetime.fromisoformat("2026-11-15T11:00"),
                                 bekle=7200)                 # 42 dk sonra Jüpiter: bekler
             self.assertEqual(len(uykular), 1)
-            self.assertTrue(42 * 60 <= uykular[0] <= 43 * 60)
+            self.assertTrue(42 * 60 <= uykular[0] <= 44 * 60, uykular)   # saniyeli başlangıç + 30 sn pay
             metin = sl.OYUN_PATH.read_text(encoding="utf-8")
             self.assertIn("Jüpiter saati 11:42–12:32 içinde üretildi, üretim saati 11:42", metin)
         finally:
