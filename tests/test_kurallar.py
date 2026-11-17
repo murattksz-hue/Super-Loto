@@ -104,6 +104,43 @@ class KolonUretTest(unittest.TestCase):
         self.assertIn("Dng", out.getvalue())
         self.assertIn("Döngü kuralı", out.getvalue())
 
+    def esnek_kontrol(self, an, eksik):
+        an["dongu_eksik"] = set(eksik)
+        sonuc = sl.taklit_uret(CEKILISLER, 4, an=an, adim=50000, deneme=2)
+        self.kontrol_60(sonuc["kolonlar"])
+        d = sonuc["dongu_kolonu"]
+        self.assertIsNotNone(d)
+        self.assertTrue(set(eksik) <= set(sonuc["kolonlar"][d]))     # hepsi tek kolonda
+        son = CEKILISLER[-1]["toplar"]
+        for i, (k, h) in enumerate(zip(sonuc["kolonlar"], sonuc["hedefler"])):
+            if i == d:
+                continue                                            # döngü kolonu esnetildi
+            # Gerekirse kademeli esnetilen taklit; kemik yapı her zaman zorunlu.
+            self.assertEqual(sl.taklit_zorunlu(k, h, son, 6, sonuc["esneklik"]), 0)
+            self.assertEqual(sl.kemik_ceza(k, set(son)), 0)
+        out = io.StringIO()
+        with redirect_stdout(out):
+            sl.taklit_yazdir(sonuc, "Set 1", an)
+        self.assertIn("döngü kolonu", out.getvalue())
+        return sonuc
+
+    def test_az_kalinca_dongu_kolonu(self):
+        an = sl.numara_analizi(CEKILISLER)
+        sonuc = self.esnek_kontrol(an, sl.donguler(CEKILISLER, capa=960)[-1]["eksik"])   # 4 numara
+        self.assertEqual(sonuc["esneklik"], 0)            # olağan durumda diğer kolonlar esnemez
+
+    def test_dongu_kolonu_zor_durum(self):
+        # Aynı onluktan 4 ardışık numara: kemik yapıyı da bozar, yine tek kolonda toplanmalı.
+        an = sl.numara_analizi(CEKILISLER)
+        self.esnek_kontrol(an, [21, 22, 23, 24])
+        self.esnek_kontrol(an, [3, 13, 23, 33, 43, 53])                       # aynı son hane
+
+    def test_cok_eksikte_dongu_kolonu_yok(self):
+        an = sl.numara_analizi(CEKILISLER)
+        an["dongu_eksik"] = set(sl.donguler(CEKILISLER, capa=975)[-1]["eksik"])
+        self.assertGreater(len(an["dongu_eksik"]), 6)
+        self.assertIsNone(sl.taklit_uret(CEKILISLER, 4, an=an, adim=50000, deneme=2)["dongu_kolonu"])
+
     def test_dongu_eksik_analizde(self):
         an = sl.numara_analizi(CEKILISLER)
         self.assertEqual(an["dongu_eksik"], set(sl.donguler(CEKILISLER)[-1]["eksik"]))
