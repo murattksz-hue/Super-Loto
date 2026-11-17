@@ -1837,6 +1837,78 @@ def dongu_karnesi_metni(cekilisler: list[dict], d: list[dict]) -> str:
     return "\n".join(r)
 
 
+# Lastik sayılar: uzun süredir gelmeyen numaralar. Bir numaranın bir çekilişte
+# gelme olasılığı 6/60 = %10; g çekiliş üst üste gelmeme olasılığı 0,9^g.
+LASTIK_SEVIYELER = [(44, "kopma sınırında"), (29, "çok gergin"), (22, "gergin")]  # ~%1, ~%5, ~%10
+
+
+def _gecikmeler(cekilisler: list[dict]) -> tuple[dict, dict]:
+    """Her numaranın şu anki gecikmesi ve geçmişteki en uzun arası (rekor)."""
+    son, rekor = {}, {t: 0 for t in SAYI_ARALIGI}
+    for i, c in enumerate(cekilisler):
+        for t in c["toplar"]:
+            if t in son:
+                rekor[t] = max(rekor[t], i - son[t] - 1)
+            son[t] = i
+    n = len(cekilisler)
+    return {t: n - 1 - son.get(t, -1) for t in SAYI_ARALIGI}, rekor
+
+
+def lastik_sayilar(cekilisler: list[dict]) -> list[dict]:
+    """En az 22 çekiliştir gelmeyen numaralar, gecikmesi en uzun olan önce."""
+    gecikme, rekor = _gecikmeler(cekilisler)
+    sonuc = []
+    for t, g in gecikme.items():
+        seviye = next((ad for esik, ad in LASTIK_SEVIYELER if g >= esik), None)
+        if seviye:
+            sonuc.append({"sayi": t, "gecikme": g, "seviye": seviye, "rekor": rekor[t],
+                          "olasilik": 0.9 ** g})
+    return sorted(sonuc, key=lambda x: (-x["gecikme"], x["sayi"]))
+
+
+def lastik_karnesi(cekilisler: list[dict], isinma: int = 60) -> list[dict]:
+    """Geriye dönük: bir numara lastik olduğunda sonraki çekilişte kaç kez geldi?
+    (Rastgele beklenen %10.) Her seviye kendi eşiği ve üstünü sayar."""
+    say = {ad: [0, 0] for _, ad in LASTIK_SEVIYELER}
+    son = {}
+    for i, c in enumerate(cekilisler):
+        if i >= isinma:
+            cikan = set(c["toplar"])
+            for t in SAYI_ARALIGI:
+                g = i - son.get(t, -1) - 1
+                for esik, ad in LASTIK_SEVIYELER:
+                    if g >= esik:
+                        say[ad][0] += 1
+                        say[ad][1] += t in cikan
+        for t in c["toplar"]:
+            son[t] = i
+    return [{"seviye": ad, "durum": say[ad][0], "geldi": say[ad][1],
+             "oran": say[ad][1] / say[ad][0] if say[ad][0] else 0.0}
+            for _, ad in reversed(LASTIK_SEVIYELER)]
+
+
+def lastik_metni(cekilisler: list[dict]) -> str:
+    def y(x, n=1):
+        return f"{100 * x:.{n}f}".replace(".", ",")
+    r = ["", "## Lastik sayılar", "",
+         "Uzun süredir gelmeyen numaralar (izleme, kural değil). Gergin: 22+ çekiliş (bu kadar uzun "
+         "ara ~%10), çok gergin: 29+ (~%5), kopma sınırında: 44+ (~%1). Tarihteki en uzun ara 71.", ""]
+    l = lastik_sayilar(cekilisler)
+    if l:
+        r += ["| Numara | Kaç çekiliştir yok | Seviye | Kendi rekoru | Bu kadar uzun ara olasılığı |",
+              "|---|---|---|---|---|"]
+        for x in l:
+            rekor = f"{x['rekor']}" + (" (rekor kırıyor)" if x["gecikme"] > x["rekor"] else "")
+            r.append(f"| {x['sayi']} | {x['gecikme']} | {x['seviye']} | {rekor} | %{y(x['olasilik'], 2)} |")
+    else:
+        r.append("Şu an lastik numara yok.")
+    r += ["", "**Lastikler kopuyor mu?** Geçmişte bir numara lastikken sonraki çekilişte gelme oranı "
+          "(rastgele beklenen %10):"]
+    for x in lastik_karnesi(cekilisler):
+        r.append(f"- {x['seviye']}: {x['durum']} durumda {x['geldi']} kez geldi, %{y(x['oran'])}")
+    return "\n".join(r)
+
+
 def kural_karnesi_yaz(cekilisler: list[dict]) -> list[dict]:
     """Kural karnesini hesaplar ve pano için kural_karnesi.csv dosyasına yazar."""
     kurallar = kural_karnesi(cekilisler)
@@ -1874,6 +1946,8 @@ def karne_ozeti(satirlar: list[dict], kemik_oran: float,
         r.append(kural_karnesi_metni(kurallar))
     if analiz:
         r.append(pencere_analizi_metni(analiz))
+    if dongu:
+        r.append(lastik_metni(dongu[0]))
     if dongu:
         r.append(dongu_karnesi_metni(*dongu))
     r += ["", "## Öneriler", ""]
@@ -1987,6 +2061,7 @@ def main() -> None:
     if a.kural_karnesi:
         print(kural_karnesi_metni(kural_karnesi_yaz(cekilisler)).strip())
         print(pencere_analizi_metni(pencere_analizi_yaz(cekilisler)))
+        print(lastik_metni(cekilisler))
         print(dongu_karnesi_metni(cekilisler, dongu_karnesi_yaz(cekilisler)))
         return
     if a.oyun == "planla":
