@@ -223,5 +223,26 @@ class DonguTamamlanmaTest(unittest.TestCase):
         self.assertIn("#986–#995", metin)
 
 
+class LastikTest(unittest.TestCase):
+    """Lastik sayılar: uzun süredir gelmeyen numaralar (izleme, kural değil)."""
+    C985 = [VERI[k] for k in sorted(VERI) if k <= 985]
+
+    def test_lastikler_985(self):
+        l = sl.lastik_sayilar(self.C985)
+        self.assertEqual((l[0]["sayi"], l[0]["gecikme"], l[0]["seviye"]), (13, 35, "çok gergin"))
+        self.assertEqual({x["sayi"] for x in l if x["gecikme"] == 26}, {33, 47})
+        self.assertTrue(all(x["gecikme"] >= sl.LASTIK_SEVIYELER[-1][0] for x in l))
+        self.assertAlmostEqual(l[0]["olasilik"], 0.9 ** 35, places=6)
+        self.assertGreaterEqual(l[0]["rekor"], 35)
+
+    def test_lastik_karnesi(self):
+        k = sl.lastik_karnesi(self.C985)
+        self.assertEqual([x["seviye"] for x in k], ["gergin", "çok gergin", "kopma sınırında"])
+        for x in k:
+            self.assertGreater(x["durum"], 0)
+            self.assertLess(abs(x["oran"] - 0.1), 0.05)       # kopma oranı ~%10, rastgele gibi
+        self.assertIn("Lastik sayılar", sl.lastik_metni(self.C985))
+
+
 if __name__ == "__main__":
     unittest.main()
