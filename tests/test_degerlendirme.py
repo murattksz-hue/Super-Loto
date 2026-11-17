@@ -179,5 +179,41 @@ class DonguTest(unittest.TestCase):
         self.assertAlmostEqual(s[1]["beklenen"], 6 * (60 - 6) / 60)
 
 
+class DonguTamamlanmaTest(unittest.TestCase):
+    """Bir döngü tamamlanınca yenisi sıradaki çekilişle 60 numarayla baştan başlar."""
+
+    def setUp(self):
+        self.gecmis = [VERI[k] for k in sorted(VERI) if k <= 985]
+        # #986–#995: 1–6, 7–12, ..., 55–60 → 10 çekilişte 60 numara tamamlanır.
+        self.tamamlayan = [{"no": 986 + i, "tarih": f"2026-12-{i + 1:02d}",
+                            "toplar": list(range(6 * i + 1, 6 * i + 7))} for i in range(10)]
+
+    def test_tamamlaninca_yeni_dongu(self):
+        d = sl.donguler(self.gecmis + self.tamamlayan, capa=986)
+        tamam = d[-2]
+        self.assertEqual((tamam["durum"], tamam["bas_no"], tamam["son_no"], tamam["uzunluk"]),
+                         ("tamam", 986, 995, 10))
+        self.assertEqual(tamam["tamamlayan"], [55, 56, 57, 58, 59, 60])
+        yeni = d[-1]
+        self.assertEqual((yeni["durum"], yeni["bas_no"], yeni["uzunluk"]), ("devam", 996, 0))
+        self.assertEqual(yeni["eksik"], list(range(1, 61)))
+
+    def test_yeni_dongu_ilerler(self):
+        sonraki = {"no": 996, "tarih": "2026-12-11", "toplar": [5, 18, 27, 33, 41, 56]}
+        cekilisler = self.gecmis + self.tamamlayan + [sonraki]
+        yeni = sl.donguler(cekilisler, capa=986)[-1]
+        self.assertEqual((yeni["bas_no"], yeni["uzunluk"], yeni["gelen"]), (996, 1, 6))
+        self.assertEqual(len(yeni["eksik"]), 54)
+        skor = sl.dongu_tahmin_skoru(cekilisler, capa=986)
+        self.assertEqual(skor[-1]["eksik_sayisi"], 60)        # yeni döngüde sayaç sıfırlandı
+        self.assertEqual(sl.numara_analizi(cekilisler)["dongu_eksik"], set(yeni["eksik"]))
+
+    def test_tamamlanma_degerlendirmede_yazar(self):
+        cekilisler = self.gecmis + self.tamamlayan
+        metin = sl.dongu_karnesi_metni(cekilisler, sl.donguler(cekilisler, capa=986))
+        self.assertIn("Döngü tamamlandı", metin)
+        self.assertIn("#986–#995", metin)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1675,6 +1675,19 @@ def dongu_karnesi_metni(cekilisler: list[dict], d: list[dict]) -> str:
     r = ["", "## Döngü kuralı", "",
          "Döngü: 60 numaranın hepsinin geldiği ardışık çekilişler. Döngü kuralı: tüm kurallar "
          "modunda bu döngüde henüz gelmeyen numaralar mümkün olduğunca aynı kolonlarda toplanır.", ""]
+    biten = tam[-1] if tam and not simdi["uzunluk"] and tam[-1]["son_no"] == cekilisler[-1]["no"] else None
+    if biten:
+        kiyas = ""
+        onceki = [x["uzunluk"] for x in tam[:-1] if x["bas_tarih"] >= sinir]
+        if onceki:
+            ort_onceki = sum(onceki) / len(onceki)
+            fark = biten["uzunluk"] - ort_onceki
+            kiyas = (f" Önceki döngülerin son 1,5 yıl ortalamasından ({v(ort_onceki)}) "
+                     + (f"{v(abs(fark))} çekiliş {'kısa' if fark < 0 else 'uzun'}." if abs(fark) >= 0.05
+                        else "farksız."))
+        r.append(f"**Döngü tamamlandı:** #{biten['bas_no']}–#{biten['son_no']}, {biten['uzunluk']} "
+                 f"çekilişte; son tamamlayan {' '.join(map(str, biten['tamamlayan']))}.{kiyas} "
+                 f"Yeni döngü #{simdi['bas_no']} ile 60 numaradan baştan başlıyor.")
     if simdi["uzunluk"]:
         r.append(f"**Şu anki döngü:** #{simdi['bas_no']}'dan beri {simdi['uzunluk']} çekiliş, "
                  f"60 numaranın {simdi['gelen']} tanesi geldi.")
