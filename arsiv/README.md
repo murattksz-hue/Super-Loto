@@ -21,6 +21,6 @@ Kupon bazında sıralama yapılmadı; kolonlar esas alındı (aşağıya bakın)
 
 ## kolon_analizi.csv
 
-Aynı 10.000 kuponun 100.000 kolonu, kolon bazında (41.546 farklı kolon; aynı kolon birden çok kuponda çıkabiliyor). Her kolon için 986 çekilişte 2–6 bilme sayıları, son 200 çekiliş, 4+ isabetler (`#çekiliş/bilen`) ve hangi kuponlarda geçtiği (`kupon/kolon no`). 5, 4, 3 bilmeye göre sıralı.
+Aynı 10.000 kuponun 100.000 kolonu, kolon bazında (41.546 farklı kolon; aynı kolon birden çok kuponda çıkabiliyor). 3'ü geçemeyen (986 çekilişte hiç 4 bilmemiş) 27.254 kolon silindi; 14.292 kolon kaldı. Her kolon için 986 çekilişte 2–6 bilme sayıları, son 200 çekiliş, 4+ isabetler (`#çekiliş/bilen`) ve hangi kuponlarda geçtiği (`kupon/kolon no`). 5, 4, 3 bilmeye göre sıralı.
 
 En iyi kolonlar: `../en_iyi_kolonlar.md`.
