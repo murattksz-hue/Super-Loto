@@ -17,4 +17,10 @@ Her kupon geçmiş 986 çekilişin hepsiyle test edildi. Kolonun taklit ettiği 
 
 Özet: ortalama kupon 932 kez 2, 96,6 kez 3, 4,3 kez 4 bildi. 9.410 kupon hiç 5 bilmedi, 564 kupon 1 kez, 24 kupon 2 kez, 2 kupon 3 kez 5 bildi. 1 kupon (#8690) #985'te 6 bildi.
 
-En iyi 100 kupon: `../en_iyi_100_kupon.md`.
+Kupon bazında sıralama yapılmadı; kolonlar esas alındı (aşağıya bakın).
+
+## kolon_analizi.csv
+
+Aynı 10.000 kuponun 100.000 kolonu, kolon bazında (41.546 farklı kolon; aynı kolon birden çok kuponda çıkabiliyor). Her kolon için 986 çekilişte 2–6 bilme sayıları, son 200 çekiliş, 4+ isabetler (`#çekiliş/bilen`) ve hangi kuponlarda geçtiği (`kupon/kolon no`). 5, 4, 3 bilmeye göre sıralı.
+
+En iyi kolonlar: `../en_iyi_kolonlar.md`.
