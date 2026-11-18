@@ -6,9 +6,10 @@ name: Jüpiter saatinde kolon üret
 # ve kolonları Jüpiter saatinde üretir. Kaçırılırsa satış kapanana kadar sonraki
 # Jüpiter saatleri, onlar da kalmadıysa Venüs saati denenir; o da yoksa hemen
 # üretilir. Kolonlar zaten üretildiyse hiçbir şey yapılmaz.
+# Otomatik kupon üretimi kullanıcının isteğiyle durduruldu (18 Kasım 2026);
+# yeniden başlatmak için aşağıdaki schedule satırlarını geri ekle.
+# Elle çalıştırmak için Actions sekmesinden "Run workflow".
 on:
-  schedule:
-    - cron: "7 4-17 * * 0,2,4"
   workflow_dispatch: {}
 
 permissions:
