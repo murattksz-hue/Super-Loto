@@ -1,5 +1,7 @@
 # Kupon analizi arşivi
 
+Tüm analizlerin özeti: `analizler.md`.
+
 ## kupon_analizi_10000.csv
 
 10.000 kuponluk büyük analiz (18 Kasım 2026). Her kupon 60 sayının hepsini 10 kolonda içerir ve sistemin tüm kurallarıyla (taklitçi, kemik, farklı düzen, döngü) #1–#986 verisiyle üretildi (`taklit_uret`, tohum = kupon no).
