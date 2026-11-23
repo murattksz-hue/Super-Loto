@@ -1,72 +1,37 @@
-Gezegen saatleri — 2026-11-22 Pazar, Ankara (gün yöneticisi: Güneş)
-  Gün doğumu 07:40, gün batımı 17:27. Gündüz saati 49 dk, gece saati 71 dk.
+Gezegen saatleri — 2026-11-24 Salı, Ankara (gün yöneticisi: Mars)
+  Gün doğumu 07:43, gün batımı 17:26. Gündüz saati 49 dk, gece saati 71 dk.
 
   Kupon için şanslı saatler (satış 21:00'de kapanır):
-    ★  08:29–09:18  Venüs (küçük talih)
-    ★★ 11:45–12:34  Jüpiter (büyük talih)
-    ★  14:12–15:01  Venüs (küçük talih)
-    ★★ 17:27–18:39  Jüpiter (büyük talih)
+    ★  09:20–10:09  Venüs (küçük talih)
+    ★★ 12:34–13:23  Jüpiter (büyük talih)
+    ★  15:00–15:49  Venüs (küçük talih)
+    ★★ 18:38–19:49  Jüpiter (büyük talih)
 
   Bütün saatler:
-    Gündüz  1. 07:40–08:29  Güneş
-    Gündüz  2. 08:29–09:18  Venüs ★
-    Gündüz  3. 09:18–10:07  Merkür
-    Gündüz  4. 10:07–10:56  Ay
-    Gündüz  5. 10:56–11:45  Satürn
-    Gündüz  6. 11:45–12:34  Jüpiter ★★
-    Gündüz  7. 12:34–13:23  Mars
-    Gündüz  8. 13:23–14:12  Güneş
-    Gündüz  9. 14:12–15:01  Venüs ★
-    Gündüz 10. 15:01–15:50  Merkür
-    Gündüz 11. 15:50–16:39  Ay
-    Gündüz 12. 16:39–17:27  Satürn
-    Gece    1. 17:27–18:39  Jüpiter ★★
-    Gece    2. 18:39–19:50  Mars
-    Gece    3. 19:50–21:01  Güneş
-    Gece    4. 21:01–22:12  Venüs ★
-    Gece    5. 22:12–23:23  Merkür
-    Gece    6. 23:23–00:34  Ay
-    Gece    7. 00:34–01:46  Satürn
-    Gece    8. 01:46–02:57  Jüpiter ★★
-    Gece    9. 02:57–04:08  Mars
-    Gece   10. 04:08–05:19  Güneş
-    Gece   11. 05:19–06:30  Venüs ★
-    Gece   12. 06:30–07:41  Merkür
+    Gündüz  1. 07:43–08:31  Mars
+    Gündüz  2. 08:31–09:20  Güneş
+    Gündüz  3. 09:20–10:09  Venüs ★
+    Gündüz  4. 10:09–10:57  Merkür
+    Gündüz  5. 10:57–11:46  Ay
+    Gündüz  6. 11:46–12:34  Satürn
+    Gündüz  7. 12:34–13:23  Jüpiter ★★
+    Gündüz  8. 13:23–14:12  Mars
+    Gündüz  9. 14:12–15:00  Güneş
+    Gündüz 10. 15:00–15:49  Venüs ★
+    Gündüz 11. 15:49–16:38  Merkür
+    Gündüz 12. 16:38–17:26  Ay
+    Gece    1. 17:26–18:38  Satürn
+    Gece    2. 18:38–19:49  Jüpiter ★★
+    Gece    3. 19:49–21:01  Mars
+    Gece    4. 21:01–22:12  Güneş
+    Gece    5. 22:12–23:24  Venüs ★
+    Gece    6. 23:24–00:35  Merkür
+    Gece    7. 00:35–01:46  Ay
+    Gece    8. 01:46–02:58  Satürn
+    Gece    9. 02:58–04:09  Jüpiter ★★
+    Gece   10. 04:09–05:21  Mars
+    Gece   11. 05:21–06:32  Güneş
+    Gece   12. 06:32–07:44  Venüs ★
   Not: Geleneksel bir hesaplamadır; çekiliş sonucunu etkilemez.
 
-KOLONLAR: 2026-11-22 Jüpiter saati 17:27–18:39 içinde üretildi, üretim saati 18:20. (İlk Jüpiter saati 11:45 kaçırıldı.)
-
-Set 1: 60 numaranın hepsini kullanan 10 kolon (tüm kurallar)
-  Şablon seçimi: aynı gün; eski yıllardan aynı gün ve aynı ay.
-   #  Kolon                         Tek Asal Tkr  Top  Dng  Uyum   Taklit edilen çekiliş
-   1   3 - 37 - 40 - 44 - 50 - 52     2    2   1  226    5   2/5   #898 2026-04-26 Paz:  6 - 36 - 38 - 44 - 49 - 53
-   2  10 - 14 - 22 - 32 - 43 - 57     2    1   0  178    6   5/5   #835 2025-11-30 Paz:  9 - 12 - 22 - 34 - 43 - 56
-   3   7 - 17 - 31 - 36 - 53 - 55     5    4   0  199    5   3/5   #967 2026-10-04 Paz:  9 - 17 - 31 - 34 - 51 - 55
-   4   8 -  9 - 19 - 30 - 35 - 56     3    1   1  157    3   3/5   #883 2026-03-22 Paz:  8 -  9 - 20 - 30 - 33 - 55
-   5   1 - 13 - 16 - 28 - 45 - 59     4    2   2  162    4   3/5   #901 2026-05-03 Paz:  1 - 13 - 19 - 27 - 42 - 56
-   6   4 - 12 - 21 - 27 - 34 - 41     3    1   0  139    5   5/5   #880 2026-03-15 Paz:  5 - 12 - 21 - 28 - 35 - 42
-   7   6 - 25 - 26 - 33 - 42 - 51     3    0   1  183    5   4/5   #856 2026-01-18 Paz:  9 - 24 - 25 - 33 - 44 - 52
-   8   5 - 15 - 24 - 48 - 54 - 60     2    1   0  206    5   4/5   #511 2023-11-05 Paz:  6 - 13 - 26 - 50 - 55 - 60
-   9  11 - 18 - 20 - 39 - 47 - 49     4    2   1  184    4   2/5   #823 2025-11-02 Paz: 15 - 17 - 20 - 39 - 44 - 47
-  10   2 - 23 - 29 - 38 - 46 - 58     2    3   0  196    6   4/5   #520 2023-11-26 Paz:  2 - 22 - 29 - 36 - 45 - 58
-  Hedef uyumu: 35/50 (asal, son çekilişten tekrar, ilk top, son top, aralık deseni)
-  Döngü kuralı: bu döngüde gelen 12 numara (9 12 17 18 24 28 30 35 39 42 50 59) dışındaki 48 numara aynı kolonlarda toplandı; kolonlara dağılımı 6/6/5/5/5/5/5/4/4/3 (Dng sütunu).
-
-  Tüm kurallar modu (--hepsi): taklitçi + analizli kural birlikte.
-  - Her kolon, kemik yapıya uyan gerçek bir geçmiş çekilişi taklit eder.
-    10 şablondan 7 tanesi son 1 yıldan, 3 tanesi önceki yıllardan; aynı gün, eski yıllar için aynı ay öncelikli.
-  - Zorunlu (her kolonda kesin):
-    taklit: onluk dağılımı, tek, ardışık ikili, aynı son hane birebir; toplam ±6
-    kemik yapı: 1–5 tek, 1–30 arasından 1–5, aynı onluda en fazla 3, aynı son haneden en fazla 2,
-    toplam 130–235, en fazla 2 ardışık ikili, son çekilişten en fazla 2 numara
-    farklı düzen: önceki kolonların her biriyle en fazla 2 ortak numara
-  - Hedef (olabildiğince yakın, Uyum sütununda): asal adedi, son çekilişten tekrar,
-    ilk ve son top ±3, aralık deseni ±2.
-  - Döngü kuralı: 60 numaranın tamamlandığı döngüde henüz gelmeyen numaralar mümkün
-    olduğunca aynı kolonlarda toplanır (Dng sütunu). 6 ya da daha az kaldıysa hepsi tek
-    bir döngü kolonuna konur; engel olan kurallar o kolon için, gerekirse kademeli
-    olarak diğer kolonlarda da esnetilir (kemik yapı diğer kolonlarda hep zorunlu).
-  - Güç dengesi, uzun süredir çıkmayanlar ve birlikte çıkanlar kullanılmaz: geçmiş
-    karşılaştırmasında gerçek çekilişlerde rastgele numaralardan farksız çıktılar.
-  - 60 numaranın hepsi tam bir kez kullanılır. Her yeni çekilişle kendini günceller.
-  Not: Kurallar kazanma ihtimalini değiştirmez; seçimi düzenli hale getirir.
+KOLONLAR: 2026-11-24 çekiliş günü ilk Jüpiter saatinde (12:34–13:23) üretilecek.
