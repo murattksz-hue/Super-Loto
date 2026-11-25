@@ -2,7 +2,7 @@
 
 # Süper Loto
 
-> **© Tüm hakları saklıdır.** Bu repoda lisans yoktur. Kod, veri ve analizler sahibinin yazılı izni olmadan kopyalanamaz, değiştirilip dağıtılamaz, ticari ya da başka bir projede kullanılamaz. Fork etmek (GitHub içinde görüntülemek) bu izni vermez. Ayrıntılar: [Telif hakkı ve kullanım](#telif-hakkı-ve-kullanım).
+> **© 2026 [murattksz-hue](https://github.com/murattksz-hue) — Tüm hakları saklıdır.** Bu repoda lisans yoktur. Kod, veri ve analizler sahibinin yazılı izni olmadan kopyalanamaz, değiştirilip dağıtılamaz, ticari ya da başka bir projede kullanılamaz. Fork etmek (GitHub içinde görüntülemek) bu izni vermez. Ayrıntılar: [Telif hakkı ve kullanım](#telif-hakkı-ve-kullanım).
 
 Süper Loto (6/60) çekiliş sonuçlarını indiren, analiz eden ve 60 numaranın hepsini kullanan 10 kolon öneren bir Python scripti. Sadece Python standart kütüphanesini kullanır; kurulum gerektirmez.
 
