@@ -179,7 +179,7 @@ python3 -m unittest discover -s tests -v
 
 ## Telif hakkı ve kullanım
 
-© 2026 murattksz-hue (repo sahibi). Tüm hakları saklıdır.
+© 2026 Super-Loto. Tüm hakları saklıdır.
 
 Bu repoda açık kaynak lisansı **yoktur**. Lisans olmaması, hiçbir kullanım izni verilmediği anlamına gelir. Repo sahibinin önceden yazılı izni olmadan:
 
