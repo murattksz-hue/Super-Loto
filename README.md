@@ -2,6 +2,8 @@
 
 # Süper Loto
 
+> **© Tüm hakları saklıdır.** Bu repoda lisans yoktur. Kod, veri ve analizler sahibinin yazılı izni olmadan kopyalanamaz, değiştirilip dağıtılamaz, ticari ya da başka bir projede kullanılamaz. Fork etmek (GitHub içinde görüntülemek) bu izni vermez. Ayrıntılar: [Telif hakkı ve kullanım](#telif-hakkı-ve-kullanım).
+
 Süper Loto (6/60) çekiliş sonuçlarını indiren, analiz eden ve 60 numaranın hepsini kullanan 10 kolon öneren bir Python scripti. Sadece Python standart kütüphanesini kullanır; kurulum gerektirmez.
 
 > **Not:** Her çekiliş bağımsızdır. Bu analizler geçmişi özetler, geleceği tahmin etmez. Geriye dönük testlerde hiçbir analiz rastgele oynamaktan daha iyi sonuç vermedi. Oynayacaksanız, kaybetmeyi göze alabileceğiniz bir bütçeyle oynayın.
@@ -174,3 +176,18 @@ python3 -m unittest discover -s tests -v
 ## Otomatik güncelleme
 
 `.github/workflows/superloto.yml`, her Süper Loto çekilişinin ertesi sabahı (Pazartesi, Çarşamba, Cuma 06:00 TR) scripti çalıştırır. GitHub zamanlanmış çalıştırmaları geciktirebildiği için 07:30'da bir yedek çalıştırma vardır; yeni çekiliş zaten alındıysa hiçbir şey değiştirmez. Yeni çekiliş varsa `superloto.csv` ve `superloto_rapor.txt` dosyalarını günceller, çekilişi kuponumuzla birlikte değerlendirip karneye ekler ve sonraki çekiliş gününü `oyun_kolonlari.txt` dosyasına hazırlar. Kolonları çekiliş günü `.github/workflows/jupiter.yml` ilk Jüpiter saatinde üretir. Actions sekmesinden "Run workflow" ile elle de çalıştırılabilir.
+
+## Telif hakkı ve kullanım
+
+© 2026 murattksz-hue (repo sahibi). Tüm hakları saklıdır.
+
+Bu repoda açık kaynak lisansı **yoktur**. Lisans olmaması, hiçbir kullanım izni verilmediği anlamına gelir. Repo sahibinin önceden yazılı izni olmadan:
+
+- kod, veri, analiz, kupon ve arşiv dosyaları kopyalanamaz, çoğaltılamaz;
+- değiştirilip ya da değiştirilmeden yeniden yayımlanamaz, dağıtılamaz;
+- ticari ya da ticari olmayan başka bir projede, üründe, sitede veya serviste kullanılamaz;
+- yapay zekâ modeli eğitimi dahil, otomatik araçlarla toplanıp başka amaçla işlenemez.
+
+GitHub'da görüntülemek veya fork etmek yalnızca GitHub Kullanım Koşulları'nın tanıdığı haklarla sınırlıdır; bu metindeki kısıtlamaları kaldırmaz ve başka bir kullanım izni vermez.
+
+İzinsiz kullanım tespit edildiğinde 5846 sayılı Fikir ve Sanat Eserleri Kanunu ve ilgili mevzuat kapsamında yasal yollara başvurulur. Kullanım izni için repo sahibiyle GitHub üzerinden iletişime geçin.
