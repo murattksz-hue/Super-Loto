@@ -1,7 +1,7 @@
-Süper Loto analizi: 989 çekiliş (2020-08-02 – 2026-11-24)
-Son çekiliş #989 (2026-11-24): 3 - 12 - 19 - 21 - 25 - 46
+Süper Loto analizi: 990 çekiliş (2020-08-02 – 2026-11-26)
+Son çekiliş #990 (2026-11-26): 10 - 17 - 28 - 32 - 33 - 42
 
-Ortalama (beklenen) çıkış sayısı: 98.9
+Ortalama (beklenen) çıkış sayısı: 99.0
 
 En çok çıkan 10 numara:
    7: 119 kez
@@ -19,25 +19,25 @@ En az çıkan 10 numara:
   13: 77 kez
   12: 83 kez
   34: 84 kez
-  33: 86 kez
   54: 86 kez
   18: 87 kez
   23: 87 kez
+  33: 87 kez
   24: 88 kez
   29: 89 kez
   41: 89 kez
 
 En uzun süredir çıkmayan 10 numara:
-  13: 39 çekiliştir çıkmıyor
-  33: 30 çekiliştir çıkmıyor
-   6: 26 çekiliştir çıkmıyor
-  26: 25 çekiliştir çıkmıyor
-  44: 25 çekiliştir çıkmıyor
-  15: 23 çekiliştir çıkmıyor
-  34: 22 çekiliştir çıkmıyor
-  20: 21 çekiliştir çıkmıyor
-  11: 20 çekiliştir çıkmıyor
-  55: 19 çekiliştir çıkmıyor
+  13: 40 çekiliştir çıkmıyor
+   6: 27 çekiliştir çıkmıyor
+  26: 26 çekiliştir çıkmıyor
+  44: 26 çekiliştir çıkmıyor
+  15: 24 çekiliştir çıkmıyor
+  34: 23 çekiliştir çıkmıyor
+  20: 22 çekiliştir çıkmıyor
+  11: 21 çekiliştir çıkmıyor
+  55: 20 çekiliştir çıkmıyor
+  31: 18 çekiliştir çıkmıyor
 
 Birlikte en çok çıkan 10 ikili:
    6-43: 19 kez
@@ -82,63 +82,63 @@ Aynı 6 numaranın tekrar çıktığı kombinasyon sayısı: 0
 Tek/çift dağılımı (tek sayı adedi):
   0 tek / 6 çift:   15 (%1.5)
   1 tek / 5 çift:   83 (%8.4)
-  2 tek / 4 çift:  243 (%24.6)
+  2 tek / 4 çift:  244 (%24.6)
   3 tek / 3 çift:  304 (%30.7)
-  4 tek / 2 çift:  243 (%24.6)
+  4 tek / 2 çift:  243 (%24.5)
   5 tek / 1 çift:   87 (%8.8)
   6 tek / 0 çift:   14 (%1.4)
 
 Ardışık ikili sayısı:
   0:  576 (%58.2)
-  1:  332 (%33.6)
+  1:  333 (%33.6)
   2:   72 (%7.3)
   3:    9 (%0.9)
 
 Onlu gruplara göre çıkış adedi:
-   1-10:  1050 (%17.7)
-  11-20:   951 (%16.0)
-  21-30:   951 (%16.0)
-  31-40:   993 (%16.7)
-  41-50:  1001 (%16.9)
+   1-10:  1051 (%17.7)
+  11-20:   952 (%16.0)
+  21-30:   952 (%16.0)
+  31-40:   995 (%16.8)
+  41-50:  1002 (%16.9)
   51-60:   988 (%16.6)
 
 Son haneye göre çıkış adedi:
-  ...0:   601
+  ...0:   602
   ...1:   587
-  ...2:   572
-  ...3:   562
+  ...2:   574
+  ...3:   563
   ...4:   560
   ...5:   599
   ...6:   627
-  ...7:   621
-  ...8:   602
+  ...7:   622
+  ...8:   603
   ...9:   603
 
 Bir önceki çekilişten tekrar eden numara sayısı:
-  0:  497 (%50.3)
+  0:  498 (%50.4)
   1:  369 (%37.3)
   2:  109 (%11.0)
   3:   13 (%1.3)
 
 Takip listesi: son çekilişteki numaralar çıktıktan sonraki çekilişte en çok / en az gelenler:
-   3 (109 kez, beklenen ~10.9): en çok 43 (18), 3 (17), 6 (17), 42 (17), 48 (17) | en az 54 (5), 53 (4), 49 (3)
-  12 (82 kez, beklenen ~8.2): en çok 12 (15), 40 (15), 6 (14), 17 (14), 18 (13) | en az 55 (4), 14 (3), 34 (3)
-  19 (105 kez, beklenen ~10.5): en çok 44 (20), 35 (18), 26 (17), 3 (16), 10 (16) | en az 53 (6), 54 (5), 16 (4)
-  21 (99 kez, beklenen ~9.9): en çok 10 (18), 43 (17), 44 (16), 37 (15), 25 (14) | en az 23 (4), 32 (3), 36 (3)
-  25 (100 kez, beklenen ~10.0): en çok 26 (16), 7 (15), 6 (14), 47 (14), 48 (14) | en az 27 (5), 36 (4), 49 (4)
-  46 (103 kez, beklenen ~10.3): en çok 9 (17), 11 (16), 31 (16), 28 (14), 40 (14) | en az 34 (5), 48 (5), 49 (5)
+  10 (98 kez, beklenen ~9.8): en çok 27 (15), 40 (15), 60 (15), 19 (14), 43 (14) | en az 14 (6), 26 (6), 46 (6)
+  17 (90 kez, beklenen ~9.0): en çok 11 (15), 38 (15), 58 (15), 32 (14), 26 (13) | en az 60 (5), 34 (4), 35 (3)
+  28 (96 kez, beklenen ~9.6): en çok 7 (19), 21 (17), 8 (15), 1 (14), 25 (14) | en az 59 (5), 3 (4), 33 (3)
+  32 (92 kez, beklenen ~9.2): en çok 8 (18), 52 (14), 1 (13), 27 (13), 37 (13) | en az 59 (5), 47 (4), 50 (4)
+  33 (86 kez, beklenen ~8.6): en çok 46 (15), 55 (15), 42 (14), 20 (13), 53 (13) | en az 12 (4), 25 (4), 34 (4)
+  42 (100 kez, beklenen ~10.0): en çok 19 (17), 38 (17), 50 (17), 11 (15), 42 (15) | en az 13 (4), 37 (4), 45 (3)
 
 Haftanın gününe göre en çok / en az çıkanlar:
   Salı (330 çekiliş, beklenen ~33.0): en çok 9 (41), 16 (40), 31 (40), 35 (40), 57 (40) | en az 53 (24), 41 (23), 26 (22)
-  Perşembe (329 çekiliş, beklenen ~32.9): en çok 58 (46), 3 (43), 20 (41), 25 (41), 55 (41) | en az 34 (22), 13 (21), 12 (20)
+  Perşembe (330 çekiliş, beklenen ~33.0): en çok 58 (46), 3 (43), 20 (41), 25 (41), 55 (41) | en az 34 (22), 13 (21), 12 (20)
   Cumartesi: 1 çekiliş (analiz için az, atlandı)
   Pazar (329 çekiliş, beklenen ~32.9): en çok 44 (52), 9 (45), 38 (44), 6 (43), 37 (43) | en az 21 (24), 29 (24), 45 (22)
-  Ki-kare (sd=118): 107.1  (~%95 eşiği 144.4; altındaysa numaralar günden bağımsız)
+  Ki-kare (sd=118): 107.3  (~%95 eşiği 144.4; altındaysa numaralar günden bağımsız)
 
 Numara toplamları: en düşük 52, en yüksek 310, ortalama 182.8, ortanca 185
   Çekilişlerin %50'si 156–210 aralığında
 
-Ki-kare istatistiği (sd=59): 50.7  (~%95 eşiği 77.9; altındaysa dağılım rastgelelikle uyumlu)
+Ki-kare istatistiği (sd=59): 50.1  (~%95 eşiği 77.9; altındaysa dağılım rastgelelikle uyumlu)
 
 Süper Loto yıllara göre özet
 Yıl    Çekiliş  En çok çıkanlar           En az çıkanlar            Ort. toplam
@@ -148,4 +148,4 @@ Yıl    Çekiliş  En çok çıkanlar           En az çıkanlar            Ort.
 2023       157  6 (27 kez)                14,23,36 (9 kez)                181.2
 2024       157  6 (27 kez)                23 (8 kez)                      184.1
 2025       156  2 (28 kez)                16,49 (9 kez)                   177.7
-2026       141  30,38 (22 kez)            5 (6 kez)                       185.4 (kısmi yıl)
+2026       142  30,38 (22 kez)            5 (6 kez)                       185.2 (kısmi yıl)

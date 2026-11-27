@@ -1,50 +1,37 @@
-Gezegen saatleri — 2026-11-26 Perşembe, Ankara (gün yöneticisi: Jüpiter)
-  Gün doğumu 07:45, gün batımı 17:25. Gündüz saati 48 dk, gece saati 72 dk.
+Gezegen saatleri — 2026-11-29 Pazar, Ankara (gün yöneticisi: Güneş)
+  Gün doğumu 07:48, gün batımı 17:24. Gündüz saati 48 dk, gece saati 72 dk.
 
   Kupon için şanslı saatler (satış 21:00'de kapanır):
-    ★★ 07:45–08:33  Jüpiter (büyük talih)
-    ★  10:10–10:58  Venüs (küçük talih)
-    ★★ 13:23–14:12  Jüpiter (büyük talih)
-    ★  15:49–16:37  Venüs (küçük talih)
-    ★★ 19:49–21:00  Jüpiter (büyük talih) (satış kapanışına kadar)
+    ★  08:36–09:24  Venüs (küçük talih)
+    ★★ 11:48–12:36  Jüpiter (büyük talih)
+    ★  14:12–15:00  Venüs (küçük talih)
+    ★★ 17:24–18:36  Jüpiter (büyük talih)
 
   Bütün saatler:
-    Gündüz  1. 07:45–08:33  Jüpiter ★★
-    Gündüz  2. 08:33–09:22  Mars
-    Gündüz  3. 09:22–10:10  Güneş
-    Gündüz  4. 10:10–10:58  Venüs ★
-    Gündüz  5. 10:58–11:47  Merkür
-    Gündüz  6. 11:47–12:35  Ay
-    Gündüz  7. 12:35–13:23  Satürn
-    Gündüz  8. 13:23–14:12  Jüpiter ★★
-    Gündüz  9. 14:12–15:00  Mars
-    Gündüz 10. 15:00–15:49  Güneş
-    Gündüz 11. 15:49–16:37  Venüs ★
-    Gündüz 12. 16:37–17:25  Merkür
-    Gece    1. 17:25–18:37  Ay
-    Gece    2. 18:37–19:49  Satürn
-    Gece    3. 19:49–21:01  Jüpiter ★★
-    Gece    4. 21:01–22:12  Mars
-    Gece    5. 22:12–23:24  Güneş
-    Gece    6. 23:24–00:36  Venüs ★
-    Gece    7. 00:36–01:47  Merkür
-    Gece    8. 01:47–02:59  Ay
-    Gece    9. 02:59–04:11  Satürn
-    Gece   10. 04:11–05:22  Jüpiter ★★
-    Gece   11. 05:22–06:34  Mars
-    Gece   12. 06:34–07:46  Güneş
+    Gündüz  1. 07:48–08:36  Güneş
+    Gündüz  2. 08:36–09:24  Venüs ★
+    Gündüz  3. 09:24–10:12  Merkür
+    Gündüz  4. 10:12–11:00  Ay
+    Gündüz  5. 11:00–11:48  Satürn
+    Gündüz  6. 11:48–12:36  Jüpiter ★★
+    Gündüz  7. 12:36–13:24  Mars
+    Gündüz  8. 13:24–14:12  Güneş
+    Gündüz  9. 14:12–15:00  Venüs ★
+    Gündüz 10. 15:00–15:48  Merkür
+    Gündüz 11. 15:48–16:36  Ay
+    Gündüz 12. 16:36–17:24  Satürn
+    Gece    1. 17:24–18:36  Jüpiter ★★
+    Gece    2. 18:36–19:48  Mars
+    Gece    3. 19:48–21:00  Güneş
+    Gece    4. 21:00–22:13  Venüs ★
+    Gece    5. 22:13–23:25  Merkür
+    Gece    6. 23:25–00:37  Ay
+    Gece    7. 00:37–01:49  Satürn
+    Gece    8. 01:49–03:01  Jüpiter ★★
+    Gece    9. 03:01–04:13  Mars
+    Gece   10. 04:13–05:25  Güneş
+    Gece   11. 05:25–06:37  Venüs ★
+    Gece   12. 06:37–07:49  Merkür
   Not: Geleneksel bir hesaplamadır; çekiliş sonucunu etkilemez.
 
-KOLONLAR: 2026-11-26 elle seçildi, üretildi (kullanıcının oynadığı kupon: 10 lastik sayı çıkarıldı; kalan 50 sayı ve ikişer kullanılan en çok çıkan 10 sayıyla son 10 çekilişe benzer 10 kolon).
-
-  Set 1
-   1  17 - 22 - 31 - 38 - 53 - 60   (elle)
-   2   3 -  7 - 10 - 40 - 49 - 58   (elle)
-   3   2 - 29 - 32 - 41 - 46 - 56   (elle)
-   4  14 - 21 - 37 - 43 - 45 - 58   (elle)
-   5   4 - 25 - 28 - 30 - 51 - 57   (elle)
-   6   2 - 23 - 38 - 39 - 52 - 54   (elle)
-   7   5 -  9 - 16 - 18 - 35 - 37   (elle)
-   8  12 - 27 - 36 - 42 - 50 - 56   (elle)
-   9   1 -  8 - 19 - 40 - 48 - 59   (elle)
-  10   3 -  7 -  9 - 16 - 24 - 47   (elle)
+KOLONLAR: 2026-11-29 çekiliş günü ilk Jüpiter saatinde (11:48–12:36) üretilecek.
